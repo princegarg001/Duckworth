@@ -1,0 +1,668 @@
+[
+  {
+    "matchId": 53327,
+    "matchNumber": 1,
+    "subtitle": "Match 1",
+    "teamAId": 610,
+    "teamBId": 591,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 6 wickets"
+  },
+  {
+    "matchId": 53328,
+    "matchNumber": 2,
+    "subtitle": "Match 2",
+    "teamAId": 612,
+    "teamBId": 593,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 4 wickets"
+  },
+  {
+    "matchId": 53329,
+    "matchNumber": 3,
+    "subtitle": "Match 3",
+    "teamAId": 627,
+    "teamBId": 646,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 5 wickets"
+  },
+  {
+    "matchId": 53330,
+    "matchNumber": 4,
+    "subtitle": "Match 4",
+    "teamAId": 123216,
+    "teamBId": 123214,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 5 wickets"
+  },
+  {
+    "matchId": 53331,
+    "matchNumber": 5,
+    "subtitle": "Match 5",
+    "teamAId": 658,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 61 runs."
+  },
+  {
+    "matchId": 53332,
+    "matchNumber": 6,
+    "subtitle": "Match 6",
+    "teamAId": 646,
+    "teamBId": 591,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 3 wickets"
+  },
+  {
+    "matchId": 53333,
+    "matchNumber": 7,
+    "subtitle": "Match 7",
+    "teamAId": 123214,
+    "teamBId": 610,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 6 wickets"
+  },
+  {
+    "matchId": 53334,
+    "matchNumber": 8,
+    "subtitle": "Match 8",
+    "teamAId": 591,
+    "teamBId": 627,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 6 wickets"
+  },
+  {
+    "matchId": 53335,
+    "matchNumber": 9,
+    "subtitle": "Match 9",
+    "teamAId": 593,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 23 runs."
+  },
+  {
+    "matchId": 53336,
+    "matchNumber": 10,
+    "subtitle": "Match 10",
+    "teamAId": 123216,
+    "teamBId": 612,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 14 runs."
+  },
+  {
+    "matchId": 53337,
+    "matchNumber": 11,
+    "subtitle": "Match 11",
+    "teamAId": 610,
+    "teamBId": 627,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 54 runs."
+  },
+  {
+    "matchId": 53338,
+    "matchNumber": 12,
+    "subtitle": "Match 12",
+    "teamAId": 658,
+    "teamBId": 123214,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 12 runs."
+  },
+  {
+    "matchId": 53339,
+    "matchNumber": 13,
+    "subtitle": "Match 13",
+    "teamAId": 629,
+    "teamBId": 646,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 4 wickets"
+  },
+  {
+    "matchId": 53340,
+    "matchNumber": 14,
+    "subtitle": "Match 14",
+    "teamAId": 591,
+    "teamBId": 593,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 5 wickets"
+  },
+  {
+    "matchId": 53341,
+    "matchNumber": 15,
+    "subtitle": "Match 15",
+    "teamAId": 123214,
+    "teamBId": 612,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 6 wickets"
+  },
+  {
+    "matchId": 53342,
+    "matchNumber": 16,
+    "subtitle": "Match 16",
+    "teamAId": 627,
+    "teamBId": 123216,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 6 wickets"
+  },
+  {
+    "matchId": 53343,
+    "matchNumber": 17,
+    "subtitle": "Match 17",
+    "teamAId": 610,
+    "teamBId": 658,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 8 wickets"
+  },
+  {
+    "matchId": 53344,
+    "matchNumber": 18,
+    "subtitle": "Match 18",
+    "teamAId": 646,
+    "teamBId": 593,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 7 wickets"
+  },
+  {
+    "matchId": 53345,
+    "matchNumber": 19,
+    "subtitle": "Match 19",
+    "teamAId": 591,
+    "teamBId": 612,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 44 runs."
+  },
+  {
+    "matchId": 53346,
+    "matchNumber": 20,
+    "subtitle": "Match 20",
+    "teamAId": 629,
+    "teamBId": 123214,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 3 runs."
+  },
+  {
+    "matchId": 53347,
+    "matchNumber": 21,
+    "subtitle": "Match 21",
+    "teamAId": 658,
+    "teamBId": 123216,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 8 wickets"
+  },
+  {
+    "matchId": 53348,
+    "matchNumber": 22,
+    "subtitle": "Match 22",
+    "teamAId": 610,
+    "teamBId": 646,
+    "winnerId": 610,
+    "statusNote": "Chennai Super Kings won by 23 runs."
+  },
+  {
+    "matchId": 53349,
+    "matchNumber": 23,
+    "subtitle": "Match 23",
+    "teamAId": 593,
+    "teamBId": 627,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 12 runs."
+  },
+  {
+    "matchId": 53350,
+    "matchNumber": 24,
+    "subtitle": "24th Match",
+    "teamAId": 629,
+    "teamBId": 123216,
+    "winnerId": 123216,
+    "statusNote": "GT won by 37 runs"
+  },
+  {
+    "matchId": 53351,
+    "matchNumber": 25,
+    "subtitle": "Match 25",
+    "teamAId": 658,
+    "teamBId": 591,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 7 wickets"
+  },
+  {
+    "matchId": 53352,
+    "matchNumber": 26,
+    "subtitle": "Match 26",
+    "teamAId": 593,
+    "teamBId": 123214,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 18 runs."
+  },
+  {
+    "matchId": 53353,
+    "matchNumber": 27,
+    "subtitle": "Match 27",
+    "teamAId": 612,
+    "teamBId": 646,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 16 runs."
+  },
+  {
+    "matchId": 53354,
+    "matchNumber": 28,
+    "subtitle": "Match 28",
+    "teamAId": 627,
+    "teamBId": 658,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 7 wickets"
+  },
+  {
+    "matchId": 53355,
+    "matchNumber": 29,
+    "subtitle": "Match 29",
+    "teamAId": 123216,
+    "teamBId": 610,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 3 wickets"
+  },
+  {
+    "matchId": 53356,
+    "matchNumber": 30,
+    "subtitle": "Match 30",
+    "teamAId": 629,
+    "teamBId": 591,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 7 runs."
+  },
+  {
+    "matchId": 53357,
+    "matchNumber": 31,
+    "subtitle": "Match 31",
+    "teamAId": 123214,
+    "teamBId": 646,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 18 runs."
+  },
+  {
+    "matchId": 53358,
+    "matchNumber": 32,
+    "subtitle": "Match 32",
+    "teamAId": 612,
+    "teamBId": 627,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 9 wickets"
+  },
+  {
+    "matchId": 53359,
+    "matchNumber": 33,
+    "subtitle": "Match 33",
+    "teamAId": 593,
+    "teamBId": 610,
+    "winnerId": 610,
+    "statusNote": "Chennai Super Kings won by 3 wickets"
+  },
+  {
+    "matchId": 53360,
+    "matchNumber": 34,
+    "subtitle": "Match 34",
+    "teamAId": 612,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 15 runs."
+  },
+  {
+    "matchId": 53361,
+    "matchNumber": 35,
+    "subtitle": "Match 35",
+    "teamAId": 591,
+    "teamBId": 123216,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 8 runs."
+  },
+  {
+    "matchId": 53362,
+    "matchNumber": 36,
+    "subtitle": "Match 36",
+    "teamAId": 646,
+    "teamBId": 658,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 9 wickets"
+  },
+  {
+    "matchId": 53363,
+    "matchNumber": 37,
+    "subtitle": "Match 37",
+    "teamAId": 123214,
+    "teamBId": 593,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 36 runs."
+  },
+  {
+    "matchId": 53364,
+    "matchNumber": 38,
+    "subtitle": "Match 38",
+    "teamAId": 627,
+    "teamBId": 610,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 11 runs."
+  },
+  {
+    "matchId": 53365,
+    "matchNumber": 39,
+    "subtitle": "Match 39",
+    "teamAId": 646,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 29 runs."
+  },
+  {
+    "matchId": 53366,
+    "matchNumber": 40,
+    "subtitle": "Match 40",
+    "teamAId": 123216,
+    "teamBId": 658,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 5 wickets"
+  },
+  {
+    "matchId": 53367,
+    "matchNumber": 41,
+    "subtitle": "Match 41",
+    "teamAId": 612,
+    "teamBId": 591,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 4 wickets"
+  },
+  {
+    "matchId": 53368,
+    "matchNumber": 42,
+    "subtitle": "Match 42",
+    "teamAId": 627,
+    "teamBId": 123214,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 20 runs."
+  },
+  {
+    "matchId": 53369,
+    "matchNumber": 43,
+    "subtitle": "Match 43",
+    "teamAId": 123216,
+    "teamBId": 646,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 6 wickets"
+  },
+  {
+    "matchId": 53370,
+    "matchNumber": 44,
+    "subtitle": "Match 44",
+    "teamAId": 629,
+    "teamBId": 593,
+    "winnerId": 593,
+    "statusNote": "Mumbai Indians won by 5 wickets"
+  },
+  {
+    "matchId": 53371,
+    "matchNumber": 45,
+    "subtitle": "Match 45",
+    "teamAId": 612,
+    "teamBId": 123214,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 6 runs."
+  },
+  {
+    "matchId": 53372,
+    "matchNumber": 46,
+    "subtitle": "Match 46",
+    "teamAId": 658,
+    "teamBId": 610,
+    "winnerId": 610,
+    "statusNote": "Chennai Super Kings won by 13 runs."
+  },
+  {
+    "matchId": 53373,
+    "matchNumber": 47,
+    "subtitle": "Match 47",
+    "teamAId": 591,
+    "teamBId": 629,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 7 wickets"
+  },
+  {
+    "matchId": 53374,
+    "matchNumber": 48,
+    "subtitle": "Match 48",
+    "teamAId": 123216,
+    "teamBId": 627,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 8 wickets"
+  },
+  {
+    "matchId": 53375,
+    "matchNumber": 49,
+    "subtitle": "Match 49",
+    "teamAId": 646,
+    "teamBId": 610,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 13 runs."
+  },
+  {
+    "matchId": 53376,
+    "matchNumber": 50,
+    "subtitle": "Match 50",
+    "teamAId": 612,
+    "teamBId": 658,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 21 runs."
+  },
+  {
+    "matchId": 53377,
+    "matchNumber": 51,
+    "subtitle": "51st Match",
+    "teamAId": 123216,
+    "teamBId": 593,
+    "winnerId": 593,
+    "statusNote": "MI won by 5 runs"
+  },
+  {
+    "matchId": 53378,
+    "matchNumber": 52,
+    "subtitle": "Match 52",
+    "teamAId": 627,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 6 wickets"
+  },
+  {
+    "matchId": 53379,
+    "matchNumber": 53,
+    "subtitle": "Match 53",
+    "teamAId": 123214,
+    "teamBId": 591,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 75 runs."
+  },
+  {
+    "matchId": 53380,
+    "matchNumber": 54,
+    "subtitle": "Match 54",
+    "teamAId": 658,
+    "teamBId": 646,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 67 runs."
+  },
+  {
+    "matchId": 53381,
+    "matchNumber": 55,
+    "subtitle": "Match 55",
+    "teamAId": 610,
+    "teamBId": 612,
+    "winnerId": 610,
+    "statusNote": "Chennai Super Kings won by 91 runs."
+  },
+  {
+    "matchId": 53382,
+    "matchNumber": 56,
+    "subtitle": "Match 56",
+    "teamAId": 593,
+    "teamBId": 591,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 52 runs."
+  },
+  {
+    "matchId": 53383,
+    "matchNumber": 57,
+    "subtitle": "Match 57",
+    "teamAId": 123214,
+    "teamBId": 123216,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 62 runs."
+  },
+  {
+    "matchId": 53384,
+    "matchNumber": 58,
+    "subtitle": "Match 58",
+    "teamAId": 629,
+    "teamBId": 612,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 8 wickets"
+  },
+  {
+    "matchId": 53385,
+    "matchNumber": 59,
+    "subtitle": "Match 59",
+    "teamAId": 610,
+    "teamBId": 593,
+    "winnerId": 593,
+    "statusNote": "Mumbai Indians won by 5 wickets"
+  },
+  {
+    "matchId": 53386,
+    "matchNumber": 60,
+    "subtitle": "Match 60",
+    "teamAId": 646,
+    "teamBId": 627,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 54 runs."
+  },
+  {
+    "matchId": 53387,
+    "matchNumber": 61,
+    "subtitle": "Match 61",
+    "teamAId": 591,
+    "teamBId": 658,
+    "winnerId": 591,
+    "statusNote": "Kolkata Knight Riders won by 54 runs."
+  },
+  {
+    "matchId": 53388,
+    "matchNumber": 62,
+    "subtitle": "Match 62",
+    "teamAId": 610,
+    "teamBId": 123216,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 7 wickets"
+  },
+  {
+    "matchId": 53389,
+    "matchNumber": 63,
+    "subtitle": "Match 63",
+    "teamAId": 123214,
+    "teamBId": 629,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 24 runs."
+  },
+  {
+    "matchId": 53390,
+    "matchNumber": 64,
+    "subtitle": "Match 64",
+    "teamAId": 627,
+    "teamBId": 612,
+    "winnerId": 612,
+    "statusNote": "Delhi Capitals won by 17 runs."
+  },
+  {
+    "matchId": 53391,
+    "matchNumber": 65,
+    "subtitle": "Match 65",
+    "teamAId": 593,
+    "teamBId": 658,
+    "winnerId": 658,
+    "statusNote": "Sunrisers Hyderabad won by 3 runs."
+  },
+  {
+    "matchId": 53392,
+    "matchNumber": 66,
+    "subtitle": "Match 66",
+    "teamAId": 591,
+    "teamBId": 123214,
+    "winnerId": 123214,
+    "statusNote": "Lucknow Super Giants won by 2 runs."
+  },
+  {
+    "matchId": 53393,
+    "matchNumber": 67,
+    "subtitle": "Match 67",
+    "teamAId": 646,
+    "teamBId": 123216,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 8 wickets"
+  },
+  {
+    "matchId": 53394,
+    "matchNumber": 68,
+    "subtitle": "Match 68",
+    "teamAId": 629,
+    "teamBId": 610,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 5 wickets"
+  },
+  {
+    "matchId": 53395,
+    "matchNumber": 69,
+    "subtitle": "Match 69",
+    "teamAId": 593,
+    "teamBId": 612,
+    "winnerId": 593,
+    "statusNote": "Mumbai Indians won by 5 wickets"
+  },
+  {
+    "matchId": 53396,
+    "matchNumber": 70,
+    "subtitle": "Match 70",
+    "teamAId": 658,
+    "teamBId": 627,
+    "winnerId": 627,
+    "statusNote": "Punjab Kings won by 5 wickets"
+  },
+  {
+    "matchId": 54730,
+    "matchNumber": 71,
+    "subtitle": "Qualifier 1",
+    "teamAId": 123216,
+    "teamBId": 629,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 7 wickets"
+  },
+  {
+    "matchId": 54731,
+    "matchNumber": 72,
+    "subtitle": "Eliminator",
+    "teamAId": 123214,
+    "teamBId": 646,
+    "winnerId": 646,
+    "statusNote": "Royal Challengers Bangalore won by 14 runs."
+  },
+  {
+    "matchId": 54732,
+    "matchNumber": 73,
+    "subtitle": "Qualifier 2",
+    "teamAId": 629,
+    "teamBId": 646,
+    "winnerId": 629,
+    "statusNote": "Rajasthan Royals won by 7 wickets"
+  },
+  {
+    "matchId": 54733,
+    "matchNumber": 74,
+    "subtitle": "Final",
+    "teamAId": 123216,
+    "teamBId": 629,
+    "winnerId": 123216,
+    "statusNote": "Gujarat Titans won by 7 wickets"
+  }
+]

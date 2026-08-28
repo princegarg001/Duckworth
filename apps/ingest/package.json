@@ -1,0 +1,31 @@
+{
+  "name": "@ipl/ingest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": { "ingest": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/cli.ts",
+    "test:unit": "vitest run --dir src",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@ipl/config": "workspace:*",
+    "@ipl/db": "workspace:*",
+    "@ipl/domain": "workspace:*",
+    "@ipl/observability": "workspace:*",
+    "drizzle-orm": "^0.38.3",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^10.16.0",
+    "testcontainers": "^10.16.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

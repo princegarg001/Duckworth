@@ -1,0 +1,54 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# turbo
+.turbo/
+
+# test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.nyc_output/
+
+# env & secrets  — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+gha-creds-*.json
+
+# terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# raw dataset — 33 MB of source JSON, fetched by `make data`
+data/raw/
+data/*.zip
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

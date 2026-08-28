@@ -1,0 +1,21 @@
+# The classic 2GB-image mistake starts here. Keep this tight.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+.git
+.github
+data/raw
+data/*.zip
+docs
+infra
+**/*.md
+!README.md
+.env
+.env.*
+!.env.example
+**/*.test.ts
+**/__tests__
+playwright-report
+test-results
