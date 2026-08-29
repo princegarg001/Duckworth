@@ -130,6 +130,19 @@ export default tseslint.config(
     },
   },
 
+  // Fastify's contracts require async signatures.
+  //
+  // A plugin must return a promise for Fastify to await its registration, and
+  // a route handler must be async for the framework to catch a throw and route
+  // it to the error handler. Several of both legitimately have no `await` in
+  // the body — the async-ness is the interface, not an oversight — so
+  // `require-await` is switched off for the layers that implement those
+  // contracts rather than worked around with a pointless `await Promise.resolve()`.
+  {
+    files: ['apps/api/src/routes/**/*.ts', 'apps/api/src/plugins/**/*.ts', 'apps/api/src/app.ts'],
+    rules: { '@typescript-eslint/require-await': 'off' },
+  },
+
   // Tests may reach for the shapes that production code may not.
   {
     files: ['**/*.test.ts', '**/__tests__/**/*.ts'],

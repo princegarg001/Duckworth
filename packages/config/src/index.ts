@@ -120,7 +120,9 @@ export function loadEnv<T extends z.ZodTypeAny>(
   source: NodeJS.ProcessEnv = process.env,
 ): z.infer<T> {
   const parsed = schema.safeParse(source);
-  if (parsed.success) return parsed.data;
+  // `safeParse` on a generic `ZodTypeAny` widens `data` to `any`; the cast
+  // restores the caller's inferred type, which is what the signature promises.
+  if (parsed.success) return parsed.data as z.infer<T>;
 
   const lines = parsed.error.issues.map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`);
   process.stderr.write(

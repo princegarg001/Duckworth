@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process';
+import { readdir, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import { IngestEnvSchema, loadEnv } from '@ipl/config';
 import { createDb, runMigrations, type DbHandle } from '@ipl/db';
@@ -86,8 +88,6 @@ const ms = (n: number) => `${n.toLocaleString()}ms`;
  * the marker directory that every valid bundle has.
  */
 async function resolveSourceRoot(dir: string): Promise<string> {
-  const { readdir, stat } = await import('node:fs/promises');
-  const { join } = await import('node:path');
   const hasMarker = async (d: string) => {
     try {
       return (await stat(join(d, 'match_innings_commentary'))).isDirectory();

@@ -24,7 +24,7 @@
     "checks"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate": "pnpm build && drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",

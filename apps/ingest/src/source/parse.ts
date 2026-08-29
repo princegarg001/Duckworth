@@ -53,9 +53,17 @@ export function asBool(value: unknown): boolean {
 }
 
 export function asText(value: unknown): string | null {
-  if (typeof value !== 'string') return value === undefined || value === null ? null : String(value);
-  const t = value.trim();
-  return t === '' ? null : t;
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t === '' ? null : t;
+  }
+  if (value === null || value === undefined) return null;
+  // Numbers and booleans stringify meaningfully; anything else would produce
+  // "[object Object]", which is a silent data corruption rather than a value.
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  throw new Error(`Expected a string-like value, got ${Object.prototype.toString.call(value)}`);
 }
 
 export function requireText(value: unknown, field: string): string {
@@ -111,21 +119,4 @@ export function parseTossDecision(text: string | undefined, code: number): 'bat'
   if (code === 1) return 'bat';
   if (code === 2) return 'field';
   throw new Error(`Cannot determine toss decision from ${JSON.stringify({ text, code })}`);
-}
-
-/**
- * Result kind. `result_type` is 1 for a runs margin and 2 for a wickets
- * margin; `win_margin` reads "91 runs" / "7 wickets".
- */
-export function parseResult(
-  resultType: number,
-  winMargin: string | undefined,
-  winnerId: number | null,
-): { result: 'runs' | 'wickets' | 'tie' | 'no_result'; margin: number | null } {
-  if (winnerId === null) return { result: 'no_result', margin: null };
-  const m = /(\d+)/.exec(winMargin ?? '');
-  const margin = m === null ? null : Number(m[1]);
-  if (resultType === 1) return { result: 'runs', margin };
-  if (resultType === 2) return { result: 'wickets', margin };
-  throw new Error(`Unrecognised result_type ${resultType}`);
 }
