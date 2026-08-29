@@ -2,14 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { api, unwrap, ApiProblem, SERVER_CACHE } from '../../../lib/api';
-import {
-  Card,
-  PageHeader,
-  Rate,
-  Signed,
-  StatTile,
-  TeamBadge,
-} from '../../../components/primitives';
+import { Card, PageHeader, Rate, StatTile, TeamBadge } from '../../../components/primitives';
 import { EmptyState } from '../../../components/states';
 
 /**

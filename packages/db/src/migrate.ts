@@ -26,8 +26,11 @@ function martsDir(): string {
  * analytics layer can be reshaped without inventing a migration for every
  * change to a SELECT. Views hold no durable state; the tables do.
  */
-export async function runMigrations(url: string, opts: { marts?: boolean } = {}): Promise<void> {
-  const handle = createDb({ url, max: 1, statementTimeoutMs: 120_000 });
+export async function runMigrations(
+  url: string,
+  opts: { marts?: boolean; ssl?: boolean } = {},
+): Promise<void> {
+  const handle = createDb({ url, max: 1, statementTimeoutMs: 120_000, ssl: opts.ssl });
   try {
     // All four schemas are created by the generated migration itself — a
     // declared `pgSchema` is emitted even when `schemaFilter` excludes its

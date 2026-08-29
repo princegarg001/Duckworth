@@ -231,13 +231,14 @@ async function main(): Promise<number> {
     // Ingest runs long, single-purpose statements; the API's 10s ceiling would
     // abort a mart refresh partway through.
     statementTimeoutMs: 300_000,
+    ssl: env.DATABASE_SSL,
   });
 
   try {
     switch (args.command) {
       case 'migrate': {
         const started = Date.now();
-        await runMigrations(env.DATABASE_URL);
+        await runMigrations(env.DATABASE_URL, { ssl: env.DATABASE_SSL });
         log(`✓ migrations and marts applied in ${ms(Date.now() - started)}`);
         return 0;
       }
@@ -252,7 +253,7 @@ async function main(): Promise<number> {
         return await cmdVerify(handle, args);
       case 'all': {
         const started = Date.now();
-        await runMigrations(env.DATABASE_URL);
+        await runMigrations(env.DATABASE_URL, { ssl: env.DATABASE_SSL });
         log('✓ schema up to date');
         log('');
         const loadCode = await cmdLoad(handle, args, sourceDir);

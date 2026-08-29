@@ -25,7 +25,20 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "protobufjs"
-    ]
+    ],
+    "overrides": {
+      "handlebars": ">=4.7.9",
+      "postcss": ">=8.5.23",
+      "vite": ">=6.4.3",
+      "undici": ">=6.28.0",
+      "uuid": ">=11.1.1",
+      "esbuild": ">=0.25.0",
+      "@fastify/static": ">=10.1.2",
+      "@opentelemetry/propagator-jaeger": ">=2.9.0",
+      "@opentelemetry/core": ">=2.8.0",
+      "@opentelemetry/exporter-prometheus": ">=0.217.0",
+      "protobufjs": ">=8.4.1"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
