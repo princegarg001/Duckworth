@@ -65,7 +65,7 @@ export const SeasonYear = z.coerce
   .max(2100)
   .describe('Season year, e.g. 2022');
 
-export const IdParam = z.coerce.number().int().positive();
+export const IdParam = z.coerce.number().int().min(1);
 
 export const MatchStage = z.enum(['league', 'qualifier1', 'eliminator', 'qualifier2', 'final']);
 

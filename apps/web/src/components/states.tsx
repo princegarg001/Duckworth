@@ -15,13 +15,7 @@ import type { CSSProperties, ReactNode } from 'react';
  * relevant boundary renders that state instead of its data.
  */
 
-export function Skeleton({
-  className,
-  style,
-}: {
-  className?: string;
-  style?: CSSProperties;
-}) {
+export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
   return <div className={clsx('skeleton', className)} style={style} aria-hidden="true" />;
 }
 
@@ -95,12 +89,16 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div
-      role="alert"
-      className="flex flex-col items-center justify-center px-6 py-16 text-center"
-    >
+    <div role="alert" className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="mb-3 text-status-critical" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+        >
           <circle cx="12" cy="12" r="9" />
           <path d="M12 7.5v5.5M12 16.2v.3" strokeLinecap="round" />
         </svg>
@@ -127,7 +125,14 @@ export function ErrorState({
 
 function EmptyGlyph() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <rect x="3.5" y="5" width="17" height="14" rx="2" />
       <path d="M3.5 10h17M9 5v14" strokeLinecap="round" />
     </svg>

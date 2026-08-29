@@ -6,7 +6,7 @@
 
 ## 0. How this assignment is actually scored
 
-The brief says it outright: *"Code quality, system design, clarity of thought, and production readiness will be valued more than feature count."*
+The brief says it outright: _"Code quality, system design, clarity of thought, and production readiness will be valued more than feature count."_
 
 That means the reviewer will spend ~15 minutes and look at, in this order:
 
@@ -37,17 +37,20 @@ du -sh data/raw
 The zip will almost certainly be one of two shapes. Identify which one you have on day 1:
 
 **Shape A — Cricsheet-style** (per-match files, ball-by-ball)
+
 - `all_matches.csv` or one `<match_id>.csv` + `<match_id>_info.csv` per match
 - Ball rows: `match_id, season, start_date, venue, innings, ball, batting_team, bowling_team, striker, non_striker, bowler, runs_off_bat, extras, wides, noballs, byes, legbyes, penalty, wicket_type, player_dismissed, other_wicket_type, other_player_dismissed`
 - Info rows are key-value: `info,team,...` / `info,toss_winner,...` / `info,player,<team>,<name>` / `info,registry,people,<name>,<cricsheet_id>`
 - The `registry` block is gold — it gives you **stable player IDs**, which solves name-collision hell for free. Use it if present.
 
 **Shape B — Kaggle-style** (two flat CSVs)
+
 - `matches.csv`: `id, season, city, date, match_type, player_of_match, venue, team1, team2, toss_winner, toss_decision, winner, result, result_margin, target_runs, target_overs, super_over, method, umpire1, umpire2`
 - `deliveries.csv`: `match_id, inning, over, ball, batting_team, bowling_team, batter, bowler, non_striker, batsman_runs, extra_runs, total_runs, extras_type, is_wicket, player_dismissed, dismissal_kind, fielder`
 - No stable player IDs. You will have to mint them and handle aliases yourself.
 
 Write a throwaway profiling script (`scripts/profile.ts`, not committed to `main` as production code) that prints, per file:
+
 - row count, null rate per column, distinct-value count per column
 - distinct values for every low-cardinality column (`wicket_type`, `extras_type`, `toss_decision`, `result`, `method`, `match_type`)
 - distinct `venue` and `team` strings across all seasons
@@ -55,13 +58,13 @@ Write a throwaway profiling script (`scripts/profile.ts`, not committed to `main
 
 **You are looking for the five landmines:**
 
-| Landmine | Why it kills naive schemas |
-|---|---|
-| Team renames | Delhi Daredevils → Delhi Capitals, Kings XI Punjab → Punjab Kings, Royal Challengers Bangalore → Bengaluru, Deccan Chargers → (separate franchise from) Sunrisers Hyderabad, Rising Pune Supergiant**s** vs Supergiant |
-| Venue name drift | "M Chinnaswamy Stadium" / "M.Chinnaswamy Stadium" / "M Chinnaswamy Stadium, Bengaluru" — same ground, 3+ strings |
-| Player name drift | "S Dhawan" vs "Shikhar Dhawan"; two different players sharing an initialised name |
-| Ball numbering | On a wide/no-ball, the `ball` number **repeats**. `(innings, over, ball)` is **not unique**. You need a monotonic `delivery_seq`. |
-| Super overs | A 3rd (and 4th) innings that is not a real innings. Must be flagged, and **excluded from every career stat**. |
+| Landmine          | Why it kills naive schemas                                                                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Team renames      | Delhi Daredevils → Delhi Capitals, Kings XI Punjab → Punjab Kings, Royal Challengers Bangalore → Bengaluru, Deccan Chargers → (separate franchise from) Sunrisers Hyderabad, Rising Pune Supergiant**s** vs Supergiant |
+| Venue name drift  | "M Chinnaswamy Stadium" / "M.Chinnaswamy Stadium" / "M Chinnaswamy Stadium, Bengaluru" — same ground, 3+ strings                                                                                                       |
+| Player name drift | "S Dhawan" vs "Shikhar Dhawan"; two different players sharing an initialised name                                                                                                                                      |
+| Ball numbering    | On a wide/no-ball, the `ball` number **repeats**. `(innings, over, ball)` is **not unique**. You need a monotonic `delivery_seq`.                                                                                      |
+| Super overs       | A 3rd (and 4th) innings that is not a real innings. Must be flagged, and **excluded from every career stat**.                                                                                                          |
 
 Getting these five right is the single biggest differentiator in this assignment. Most submissions get zero of them.
 
@@ -99,20 +102,20 @@ Getting these five right is the single biggest differentiator in this assignment
 
 ### Stack decisions (opinionated — pick these and move on)
 
-| Layer | Choice | Why this over the alternative |
-|---|---|---|
-| Runtime | **Node 22 LTS + TypeScript 5.x (strict, `noUncheckedIndexedAccess`)** | One language across the stack; shared types package between API and web is a genuine architectural win a reviewer will notice |
-| HTTP | **Fastify 5** | Schema-first by design. Your validation schema *is* your OpenAPI spec — no drift possible. Express + manual swagger comments is the thing that always rots. NestJS is fine but its DI ceremony hides your actual design. |
-| ORM | **Drizzle ORM + drizzle-kit** | SQL-first. You write real SQL for the analytics, and get typed results. Prisma actively fights you on window functions, CTEs and matviews — and this assignment is 70% analytical SQL. |
-| DB | **PostgreSQL 17** | Required. Use it properly: CTEs, window functions, matviews, partial + covering indexes, `GENERATED` columns. |
-| Cache | **Redis 7** (`ioredis`) | Cache-aside on leaderboards + rate limiting. Optional but cheap to add and shows you think about read paths. |
-| Frontend | **Next.js 15 App Router + TanStack Query v5 + Tailwind + shadcn/ui** | RSC for first paint on match/player pages, TanStack Query for client-side filters and pagination. |
-| Charts | **Recharts** (or **visx** if you want to show off) | Recharts is enough. Don't burn 2 days on D3. |
-| Monorepo | **pnpm workspaces + Turborepo** | Remote-cacheable CI, shared `packages/contracts`. |
-| Tests | **Vitest + Testcontainers + Playwright + k6** | Testcontainers-backed integration tests against a real Postgres is the single highest-signal testing choice you can make here. |
-| Containers | **Docker multi-stage → distroless** | Non-root, no shell, tiny, SBOM'd. |
-| CI | **GitHub Actions** | Required. |
-| Cloud | **GCP** (Cloud Run + Cloud SQL + Artifact Registry) — see §15 | Fastest path to a live URL that survives a reviewer clicking it 3 weeks later. |
+| Layer      | Choice                                                                | Why this over the alternative                                                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime    | **Node 22 LTS + TypeScript 5.x (strict, `noUncheckedIndexedAccess`)** | One language across the stack; shared types package between API and web is a genuine architectural win a reviewer will notice                                                                                            |
+| HTTP       | **Fastify 5**                                                         | Schema-first by design. Your validation schema _is_ your OpenAPI spec — no drift possible. Express + manual swagger comments is the thing that always rots. NestJS is fine but its DI ceremony hides your actual design. |
+| ORM        | **Drizzle ORM + drizzle-kit**                                         | SQL-first. You write real SQL for the analytics, and get typed results. Prisma actively fights you on window functions, CTEs and matviews — and this assignment is 70% analytical SQL.                                   |
+| DB         | **PostgreSQL 17**                                                     | Required. Use it properly: CTEs, window functions, matviews, partial + covering indexes, `GENERATED` columns.                                                                                                            |
+| Cache      | **Redis 7** (`ioredis`)                                               | Cache-aside on leaderboards + rate limiting. Optional but cheap to add and shows you think about read paths.                                                                                                             |
+| Frontend   | **Next.js 15 App Router + TanStack Query v5 + Tailwind + shadcn/ui**  | RSC for first paint on match/player pages, TanStack Query for client-side filters and pagination.                                                                                                                        |
+| Charts     | **Recharts** (or **visx** if you want to show off)                    | Recharts is enough. Don't burn 2 days on D3.                                                                                                                                                                             |
+| Monorepo   | **pnpm workspaces + Turborepo**                                       | Remote-cacheable CI, shared `packages/contracts`.                                                                                                                                                                        |
+| Tests      | **Vitest + Testcontainers + Playwright + k6**                         | Testcontainers-backed integration tests against a real Postgres is the single highest-signal testing choice you can make here.                                                                                           |
+| Containers | **Docker multi-stage → distroless**                                   | Non-root, no shell, tiny, SBOM'd.                                                                                                                                                                                        |
+| CI         | **GitHub Actions**                                                    | Required.                                                                                                                                                                                                                |
+| Cloud      | **GCP** (Cloud Run + Cloud SQL + Artifact Registry) — see §15         | Fastest path to a live URL that survives a reviewer clicking it 3 weeks later.                                                                                                                                           |
 
 ---
 
@@ -156,7 +159,7 @@ ipl-platform/
 └── .env.example
 ```
 
-**ADRs are the highest ROI thing in this list.** Five short files (200 words each) explaining *why* you chose what you chose is what "clarity of thought" literally means in the brief. Almost nobody submits them.
+**ADRs are the highest ROI thing in this list.** Five short files (200 words each) explaining _why_ you chose what you chose is what "clarity of thought" literally means in the brief. Almost nobody submits them.
 
 ---
 
@@ -364,7 +367,7 @@ CREATE TABLE core.ingest_run (
 - **`delivery_seq`.** Explains why `(over, ball)` is not unique and how you fixed it. This single paragraph signals more domain care than any feature.
 - **Generated columns.** `runs_total` and `is_legal_ball` are computed in the database, so no application code can ever write an inconsistent row.
 - **`is_super_over`.** Every mart filters it out. Say so explicitly.
-- **Why not partition `delivery`?** ~260k rows total. Partitioning here would be resume-driven development. Note that you considered it and rejected it, with the threshold at which you'd revisit (~50M rows / when a single season's scan exceeds your p99 budget). *Knowing when not to use a technique is a stronger signal than using it.*
+- **Why not partition `delivery`?** ~260k rows total. Partitioning here would be resume-driven development. Note that you considered it and rejected it, with the threshold at which you'd revisit (~50M rows / when a single season's scan exceeds your p99 budget). _Knowing when not to use a technique is a stronger signal than using it._
 
 ---
 
@@ -419,17 +422,17 @@ Ship these as a `packages/db/checks/*.sql` set executed by `ingest verify`. This
 
 Materialized views, refreshed `CONCURRENTLY` after ingest. Each gets a `UNIQUE` index (required for concurrent refresh).
 
-| Matview | Serves |
-|---|---|
-| `marts.batting_innings` | per-player-per-match: runs, balls, 4s, 6s, SR, dismissal |
-| `marts.bowling_innings` | per-player-per-match: overs, runs, wickets, econ, dots, maidens |
-| `marts.batting_career` | career + per-season rollups, with `min_balls` guardrails |
-| `marts.bowling_career` | same for bowling |
-| `marts.phase_splits` | powerplay (ov 0–5) / middle (6–14) / death (15–19) for bat + bowl |
-| `marts.partnership` | wicket-by-wicket partnerships per innings |
-| `marts.head_to_head` | franchise × franchise: P/W/L/NR, last 5 |
-| `marts.venue_profile` | avg 1st-inns score, chase win %, toss-decision win % |
-| `marts.points_table` | per season: P, W, L, NR, pts, **NRR**, position |
+| Matview                 | Serves                                                            |
+| ----------------------- | ----------------------------------------------------------------- |
+| `marts.batting_innings` | per-player-per-match: runs, balls, 4s, 6s, SR, dismissal          |
+| `marts.bowling_innings` | per-player-per-match: overs, runs, wickets, econ, dots, maidens   |
+| `marts.batting_career`  | career + per-season rollups, with `min_balls` guardrails          |
+| `marts.bowling_career`  | same for bowling                                                  |
+| `marts.phase_splits`    | powerplay (ov 0–5) / middle (6–14) / death (15–19) for bat + bowl |
+| `marts.partnership`     | wicket-by-wicket partnerships per innings                         |
+| `marts.head_to_head`    | franchise × franchise: P/W/L/NR, last 5                           |
+| `marts.venue_profile`   | avg 1st-inns score, chase win %, toss-decision win %              |
+| `marts.points_table`    | per season: P, W, L, NR, pts, **NRR**, position                   |
 
 ### Net Run Rate — the flex
 
@@ -458,7 +461,7 @@ SELECT team,
 FROM ...
 ```
 
-Put a note in the README: *"Points table NRR is validated against published 2016 and 2019 standings — see `packages/domain/__tests__/nrr.test.ts`."* That one sentence is worth more than three extra pages.
+Put a note in the README: _"Points table NRR is validated against published 2016 and 2019 standings — see `packages/domain/__tests__/nrr.test.ts`."_ That one sentence is worth more than three extra pages.
 
 **Refresh strategy:** after ingest (one-shot), plus a `POST /internal/refresh` endpoint guarded by a service token for on-demand. Document that in a real streaming system this would be an incremental/CDC pipeline; here, batch refresh is correct for the data's cadence. Say why.
 
@@ -528,6 +531,7 @@ POST /internal/refresh-marts                # service-token guarded
 // cursor = base64({ lastSeq: number, lastId: number }), opaque to the client
 { "data": [...], "page": { "nextCursor": "eyJ...", "limit": 50, "hasMore": true } }
 ```
+
 Offer `?page=` offset mode only on small collections (seasons, venues) and say why in the docs.
 
 **RFC 9457 `application/problem+json` for every error.** One error shape, forever:
@@ -540,7 +544,12 @@ Offer `?page=` offset mode only on small collections (seasons, venues) and say w
   "detail": "limit must be <= 100",
   "instance": "/v1/matches",
   "traceId": "0af7651916cd43dd8448eb211c80319c",
-  "errors": [{ "path": "query.limit", "message": "Number must be less than or equal to 100" }]
+  "errors": [
+    {
+      "path": "query.limit",
+      "message": "Number must be less than or equal to 100"
+    }
+  ]
 }
 ```
 
@@ -560,31 +569,38 @@ Define request/response schemas **once** in `packages/contracts` with Zod, then:
 
 ```ts
 // packages/contracts/src/matches.ts
-export const MatchQuery = z.object({
-  season: z.coerce.number().int().min(2008).max(2030).optional(),
-  team:   z.string().max(64).optional(),
-  limit:  z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.string().optional(),
-}).openapi('MatchQuery');
+export const MatchQuery = z
+  .object({
+    season: z.coerce.number().int().min(2008).max(2030).optional(),
+    team: z.string().max(64).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.string().optional(),
+  })
+  .openapi('MatchQuery');
 ```
 
 ```ts
 // apps/api/src/routes/matches.ts
-app.withTypeProvider<ZodTypeProvider>().get('/v1/matches', {
-  schema: {
-    tags: ['matches'],
-    querystring: MatchQuery,
-    response: { 200: MatchListResponse, 422: Problem },
+app.withTypeProvider<ZodTypeProvider>().get(
+  '/v1/matches',
+  {
+    schema: {
+      tags: ['matches'],
+      querystring: MatchQuery,
+      response: { 200: MatchListResponse, 422: Problem },
+    },
   },
-}, handler);
+  handler,
+);
 ```
 
 Then:
+
 - `@fastify/swagger` emits **OpenAPI 3.1** at `/openapi.json`, `@fastify/swagger-ui` serves `/docs`.
 - A CI job dumps the spec, runs **Spectral** lint on it, and **fails the build if the committed `openapi.json` differs from the generated one.**
 - `openapi-typescript` generates the frontend's types; `openapi-fetch` gives a fully-typed client. **The frontend cannot compile against an API route that doesn't exist.**
 
-That last bullet — a contract break in the API failing the *frontend's* type-check in CI — is a genuinely senior piece of design and is worth calling out explicitly in the README.
+That last bullet — a contract break in the API failing the _frontend's_ type-check in CI — is a genuinely senior piece of design and is worth calling out explicitly in the README.
 
 ---
 
@@ -592,16 +608,16 @@ That last bullet — a contract break in the API failing the *frontend's* type-c
 
 ### Pages
 
-| Route | Content |
-|---|---|
-| `/` | League overview: seasons timeline, all-time leaders, quick stats |
-| `/seasons/[year]` | Points table (with NRR), season leaders, matches list |
-| `/matches` | Filterable, paginated table (season / team / venue / date range) |
-| `/matches/[id]` | Scorecard (both innings), **worm chart**, **manhattan chart**, partnership bars, ball-by-ball drawer |
-| `/teams` → `/teams/[id]` | Season-by-season trend, H2H matrix heatmap, home/away splits |
-| `/players` → `/players/[id]` | Career arc, phase splits radar, vs-opponent breakdown, venue splits, form (last 10) |
-| `/players/compare` | Two-player side-by-side |
-| `/venues/[id]` | Toss impact, avg 1st-innings score by season, chase success rate |
+| Route                        | Content                                                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/`                          | League overview: seasons timeline, all-time leaders, quick stats                                     |
+| `/seasons/[year]`            | Points table (with NRR), season leaders, matches list                                                |
+| `/matches`                   | Filterable, paginated table (season / team / venue / date range)                                     |
+| `/matches/[id]`              | Scorecard (both innings), **worm chart**, **manhattan chart**, partnership bars, ball-by-ball drawer |
+| `/teams` → `/teams/[id]`     | Season-by-season trend, H2H matrix heatmap, home/away splits                                         |
+| `/players` → `/players/[id]` | Career arc, phase splits radar, vs-opponent breakdown, venue splits, form (last 10)                  |
+| `/players/compare`           | Two-player side-by-side                                                                              |
+| `/venues/[id]`               | Toss impact, avg 1st-innings score by season, chase success rate                                     |
 
 ### Engineering points
 
@@ -630,10 +646,14 @@ That last bullet — a contract break in the API failing the *frontend's* type-c
   "commit": "a1b2c3d",
   "uptimeSeconds": 8241,
   "checks": {
-    "database":       { "status": "ok", "latencyMs": 3 },
-    "redis":          { "status": "ok", "latencyMs": 1 },
-    "migrations":     { "status": "ok", "applied": 14, "pending": 0 },
-    "martFreshness":  { "status": "ok", "lastRefresh": "2026-08-27T04:00:00Z", "ageSeconds": 3600 }
+    "database": { "status": "ok", "latencyMs": 3 },
+    "redis": { "status": "ok", "latencyMs": 1 },
+    "migrations": { "status": "ok", "applied": 14, "pending": 0 },
+    "martFreshness": {
+      "status": "ok",
+      "lastRefresh": "2026-08-27T04:00:00Z",
+      "ageSeconds": 3600
+    }
   }
 }
 ```
@@ -646,16 +666,16 @@ Liveness must **not** check dependencies (or a DB blip restarts every pod). Read
 
 ## 10. Testing
 
-| Layer | Tool | What |
-|---|---|---|
-| Unit | Vitest | `packages/domain`: NRR, phase classification, strike rate/economy edge cases (0 balls faced, all-out, super over), dismissal credit. Aim 100% here — it's pure functions. |
-| Integration | Vitest + **Testcontainers** | Spin real Postgres, run migrations, load a **10-match golden fixture**, hit routes via `app.inject()`. Assert JSON shape *and* numbers. |
-| Contract | `openapi-response-validator` | Every integration response validated against the generated spec. Guarantees docs match reality. |
-| Ingest | Vitest | Idempotency (run twice → same counts), malformed row rejection, alias resolution, all DQ assertions pass. |
-| E2E | Playwright | 4 flows: load dashboard → filter matches → open match detail (chart renders) → player page. Plus one a11y pass with `@axe-core/playwright`. |
-| Load | k6 | 100 VUs on `/v1/matches` and `/v1/seasons/2016/points-table`. Record p95. Put the number in the README. |
+| Layer       | Tool                         | What                                                                                                                                                                      |
+| ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | Vitest                       | `packages/domain`: NRR, phase classification, strike rate/economy edge cases (0 balls faced, all-out, super over), dismissal credit. Aim 100% here — it's pure functions. |
+| Integration | Vitest + **Testcontainers**  | Spin real Postgres, run migrations, load a **10-match golden fixture**, hit routes via `app.inject()`. Assert JSON shape _and_ numbers.                                   |
+| Contract    | `openapi-response-validator` | Every integration response validated against the generated spec. Guarantees docs match reality.                                                                           |
+| Ingest      | Vitest                       | Idempotency (run twice → same counts), malformed row rejection, alias resolution, all DQ assertions pass.                                                                 |
+| E2E         | Playwright                   | 4 flows: load dashboard → filter matches → open match detail (chart renders) → player page. Plus one a11y pass with `@axe-core/playwright`.                               |
+| Load        | k6                           | 100 VUs on `/v1/matches` and `/v1/seasons/2016/points-table`. Record p95. Put the number in the README.                                                                   |
 
-**The golden fixture is important.** A committed 10-match subset with hand-verified expected outputs (`fixtures/expected/match-335982-scorecard.json`) means your tests assert *correct cricket*, not just "returns 200". That's the difference between tests and test theatre.
+**The golden fixture is important.** A committed 10-match subset with hand-verified expected outputs (`fixtures/expected/match-335982-scorecard.json`) means your tests assert _correct cricket_, not just "returns 200". That's the difference between tests and test theatre.
 
 Coverage gate at 80% on `apps/api` and `packages/domain`, enforced in CI. Don't gate the frontend on coverage — gate it on Playwright.
 
@@ -693,6 +713,7 @@ CMD ["dist/server.js"]
 ```
 
 Points to hit:
+
 - `--frozen-lockfile`, always.
 - **Distroless + nonroot**: no shell, no package manager, minimal CVE surface. Have an answer for "how do you debug it then?" → ephemeral debug container / `:debug` variant.
 - Order layers by change frequency (lockfile → deps → source).
@@ -708,12 +729,13 @@ Points to hit:
 services:
   postgres:
     image: postgres:17-alpine
-    healthcheck: { test: ["CMD-SHELL","pg_isready -U ipl"], interval: 5s, retries: 10 }
+    healthcheck:
+      { test: ['CMD-SHELL', 'pg_isready -U ipl'], interval: 5s, retries: 10 }
   redis:
     image: redis:7-alpine
   migrate:
     build: { context: ., dockerfile: apps/ingest/Dockerfile }
-    command: ["migrate","up"]
+    command: ['migrate', 'up']
     depends_on: { postgres: { condition: service_healthy } }
   api:
     depends_on: { migrate: { condition: service_completed_successfully } }
@@ -743,6 +765,7 @@ e2e        → docker compose up + playwright
 ```
 
 Details that matter:
+
 - **Concurrency group** cancelling superseded runs.
 - **Least-privilege `permissions:`** per job (`contents: read` by default).
 - **Pin actions by SHA**, not `@v4`. Supply-chain awareness.
@@ -791,6 +814,7 @@ envs/
 Templates: `Deployment` (api, web), `Service`, `Ingress`, `ConfigMap`, `ExternalSecret`, `HPA`, `PDB`, `NetworkPolicy`, `ServiceAccount`, and a migration `Job` with a `pre-upgrade` hook.
 
 Non-negotiables inside the chart:
+
 - resource `requests` **and** `limits` (and a note on why CPU limits are often a mistake — throttling)
 - `readinessProbe` → `/health/ready`, `livenessProbe` → `/health/live`, plus a `startupProbe`
 - `securityContext`: `runAsNonRoot`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation: false`, `capabilities: drop: [ALL]`
@@ -810,18 +834,20 @@ A Helm chart proven by a green `kind` job in CI is more credible than a live clu
 Two viable paths. **Pick based on budget, then be transparent about the choice.**
 
 **Path A — Cloud Run (recommended)**
+
 - API + web on Cloud Run (scale-to-zero, generous free tier, HTTPS + custom domain free)
 - Postgres on **Neon** free tier (or Cloud SQL `db-f1-micro` if you have credits)
 - Artifact Registry for images
 - Cost: ~$0–5/month. **Survives a reviewer clicking the link a month later**, which is the actual requirement.
 
 **Path B — GKE Autopilot**
+
 - Real cluster, your Helm chart actually running, Ingress + managed cert
 - Cost: ~$70+/month. Only if you have credits and can leave it up through the hiring process.
 
 **Do this either way:** deploy on Path A for the live URL, ship the Helm chart validated on `kind` in CI, and write in the README:
 
-> *Live deployment runs on Cloud Run for cost reasons (scale-to-zero, ~$0/mo). The Kubernetes manifests and Helm chart are validated on every commit via a kind-based integration job (`.github/workflows/ci.yml#e2e-k8s`) — see the passing run and the recorded demo in `docs/k8s-demo.md`. On GKE Autopilot the same chart deploys with `helm upgrade --install -f values-prod.yaml`.*
+> _Live deployment runs on Cloud Run for cost reasons (scale-to-zero, ~$0/mo). The Kubernetes manifests and Helm chart are validated on every commit via a kind-based integration job (`.github/workflows/ci.yml#e2e-k8s`) — see the passing run and the recorded demo in `docs/k8s-demo.md`. On GKE Autopilot the same chart deploys with `helm upgrade --install -f values-prod.yaml`._
 
 That paragraph is honest, shows judgement about cost, and pre-empts the obvious question. **A dead link is worse than no link** — set a calendar reminder to check it weekly.
 
@@ -844,7 +870,7 @@ Cheap to do, and it's your actual domain — lean into it.
 - `SECURITY.md` with a disclosure policy.
 - CodeQL workflow enabled.
 
-One short "Threat model" section in `docs/architecture.md` — what's exposed, what's trusted, what you'd add for a real multi-tenant deployment (authn/authz, per-tenant rate limits, audit log). Showing you know what's *missing* and why it's out of scope beats pretending it's complete.
+One short "Threat model" section in `docs/architecture.md` — what's exposed, what's trusted, what you'd add for a real multi-tenant deployment (authn/authz, per-tenant rate limits, audit log). Showing you know what's _missing_ and why it's out of scope beats pretending it's complete.
 
 ---
 
@@ -861,7 +887,7 @@ Structure:
 7. **CI/CD** — pipeline diagram, what gates what
 8. **Deployment** — the honest Cloud-Run-vs-K8s paragraph from §14
 9. **Performance** — ingest throughput, p95 latencies from k6, biggest query plan before/after indexing
-10. **Trade-offs & what I'd do next** ← *read most carefully of all*
+10. **Trade-offs & what I'd do next** ← _read most carefully of all_
 11. **ADR index**
 
 Section 10 is where you demonstrate seniority. Be specific:
@@ -878,18 +904,18 @@ Add a Mermaid ERD and pipeline diagram — they render natively on GitHub and ma
 
 ## 17. Execution schedule (10 working days)
 
-| Day | Deliverable | Definition of done |
-|---|---|---|
-| **1** | Dataset profiled; monorepo scaffolded; compose (pg + redis) up; CI skeleton green | `make up` works; a lint job passes on an empty repo |
-| **2** | Full schema + migrations; alias seed data; ERD | `pnpm db:migrate` from empty → full schema, twice, cleanly |
-| **3** | Ingestion end-to-end; DQ assertions; idempotency test | Full dataset loads in < 30s; second run is a no-op |
-| **4** | Marts + NRR; validated against published standings | `points-table` matches 2016 + 2019 official tables exactly |
-| **5** | API: health, seasons, teams, matches, players; Zod→OpenAPI; Swagger live | `/docs` renders; contract-drift CI job green |
-| **6** | API: analytics endpoints, caching, pagination, errors, rate limits; integration tests | Coverage ≥ 80% on api + domain |
-| **7** | Frontend: layout, dashboard, matches list + detail with charts | Loading/empty/error states verifiable via `?__state=` |
-| **8** | Frontend: players, teams, venues, compare; a11y pass | Playwright green; axe reports no critical violations |
-| **9** | Dockerfiles → distroless; full CI/CD; Trivy + SBOM + cosign; deploy live; seed prod | Live URL loads with real data; `/health/ready` returns all-ok |
-| **10** | Terraform + Helm + kind CI job; Datadog dashboard; README + ADRs + runbook; k6 numbers | Clean-clone test passes; every link in the README works |
+| Day    | Deliverable                                                                            | Definition of done                                            |
+| ------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **1**  | Dataset profiled; monorepo scaffolded; compose (pg + redis) up; CI skeleton green      | `make up` works; a lint job passes on an empty repo           |
+| **2**  | Full schema + migrations; alias seed data; ERD                                         | `pnpm db:migrate` from empty → full schema, twice, cleanly    |
+| **3**  | Ingestion end-to-end; DQ assertions; idempotency test                                  | Full dataset loads in < 30s; second run is a no-op            |
+| **4**  | Marts + NRR; validated against published standings                                     | `points-table` matches 2016 + 2019 official tables exactly    |
+| **5**  | API: health, seasons, teams, matches, players; Zod→OpenAPI; Swagger live               | `/docs` renders; contract-drift CI job green                  |
+| **6**  | API: analytics endpoints, caching, pagination, errors, rate limits; integration tests  | Coverage ≥ 80% on api + domain                                |
+| **7**  | Frontend: layout, dashboard, matches list + detail with charts                         | Loading/empty/error states verifiable via `?__state=`         |
+| **8**  | Frontend: players, teams, venues, compare; a11y pass                                   | Playwright green; axe reports no critical violations          |
+| **9**  | Dockerfiles → distroless; full CI/CD; Trivy + SBOM + cosign; deploy live; seed prod    | Live URL loads with real data; `/health/ready` returns all-ok |
+| **10** | Terraform + Helm + kind CI job; Datadog dashboard; README + ADRs + runbook; k6 numbers | Clean-clone test passes; every link in the README works       |
 
 **Cut in this order if you run short:** Datadog → Terraform → Redis → compare page → k6. **Never cut:** README, ADRs, tests, migrations, Swagger, working deploy.
 

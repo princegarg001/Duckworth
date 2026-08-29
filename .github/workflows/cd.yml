@@ -20,15 +20,11 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to Cloud Run
+    name: Deploy to Azure Container Apps
     runs-on: ubuntu-latest
     environment:
       name: production
       url: ${{ steps.deploy-web.outputs.url }}
-    permissions:
-      contents: read
-      id-token: write # Workload Identity Federation
-
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -36,55 +32,47 @@ jobs:
         id: tag
         run: echo "sha=${{ inputs.image_tag || github.sha }}" >> "$GITHUB_OUTPUT"
 
-      # Workload Identity Federation, not a service-account JSON key.
-      #
-      # A key is a long-lived credential that lives in a secret store, gets
-      # copied into a laptop for "just this once", and is still valid two years
-      # after the person who created it left. WIF exchanges this workflow's
-      # OIDC token for a short-lived access token, scoped to this repository
-      # and this branch. There is no key to leak, rotate, or forget.
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v2.1.7
+      # A single service-principal credential, not a personal login. Created
+      # once with:
+      #   az ad sp create-for-rbac --name ipl-cd --role contributor \
+      #     --scopes /subscriptions/<sub-id>/resourceGroups/ipl-platform \
+      #     --sdk-auth
+      # and stored as the AZURE_CREDENTIALS repository secret. Scoped to one
+      # resource group, not the subscription, so a leaked credential cannot
+      # touch anything outside this project.
+      - name: Authenticate to Azure
+        uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a # v2.2.0
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
-
-      # ── 0. Build into Artifact Registry ─────────────────────────────────
-      #
-      # CI publishes to GHCR, which is where the Trivy scan and the cosign
-      # signature live and which needs no cloud account to be green. Cloud Run
-      # pulls from Artifact Registry in the same project, so the images are
-      # built here against the deploy identity rather than copied between
-      # registries — one fewer credential and one fewer thing to drift.
-      #
-      # The web image is built later, after the API URL exists: Next inlines
-      # NEXT_PUBLIC_API_URL at build time and Cloud Run does not assign a URL
-      # until the service is created.
       - uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
 
-      - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+      - name: Log Docker in to the registry
+        run: |
+          az acr login --name "${{ vars.AZURE_ACR_NAME }}"
 
+      # ── 1. Build and push ────────────────────────────────────────────────
+      #
+      # `az acr build` (ACR Tasks) is unavailable on Azure for Students
+      # subscriptions, so CI builds locally, exactly as scripts/deploy-azure.sh
+      # does, and pushes with `docker push`.
       - name: Build and push api and ingest
         run: |
           set -euo pipefail
           for svc in api ingest; do
             docker buildx build --platform linux/amd64 \
               -f "apps/${svc}/Dockerfile" \
-              -t "${{ vars.ARTIFACT_REGISTRY }}/${svc}:${{ steps.tag.outputs.sha }}" \
+              -t "${{ vars.AZURE_ACR_LOGIN_SERVER }}/${svc}:${{ steps.tag.outputs.sha }}" \
               --cache-from "type=gha,scope=cd-${svc}" \
               --cache-to "type=gha,mode=max,scope=cd-${svc}" \
               --push .
           done
 
-      # ── 1. Migrate, behind its own gate ─────────────────────────────────
+      # ── 2. Migrate, behind its own gate ─────────────────────────────────
       #
       # A separate, blocking step before any new code serves traffic. It runs
       # the same `ingest all` the compose file and the Helm hook run, so it
-      # also re-verifies the 23 data-quality checks and fails the deploy if the
+      # re-verifies the 23 data-quality checks and fails the deploy if the
       # data no longer reconciles.
       #
       # Migrations are expand-then-contract: add a column, backfill it, switch
@@ -93,84 +81,77 @@ jobs:
       # docs/runbook.md.
       - name: Run migrations and verify data
         run: |
-          gcloud run jobs update ipl-platform-ingest \
-            --region "${{ vars.GCP_REGION }}" \
-            --image "${{ vars.ARTIFACT_REGISTRY }}/ingest:${{ steps.tag.outputs.sha }}"
-          gcloud run jobs execute ipl-platform-ingest \
-            --region "${{ vars.GCP_REGION }}" --wait
+          set -euo pipefail
+          az containerapp job update \
+            --name ipl-ingest --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/ingest:${{ steps.tag.outputs.sha }}"
 
-      # ── 2. Deploy the API with no traffic, then smoke it ────────────────
-      - name: Deploy API revision (0% traffic)
+          EXEC_NAME=$(az containerapp job start \
+            --name ipl-ingest --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query name -o tsv)
+
+          for i in $(seq 1 90); do
+            STATUS=$(az containerapp job execution show \
+              --name ipl-ingest --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --job-execution-name "$EXEC_NAME" --query 'properties.status' -o tsv)
+            case "$STATUS" in
+              Succeeded) echo "ingest succeeded"; break ;;
+              Failed|Degraded)
+                az containerapp job logs show \
+                  --name ipl-ingest --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                  --container ipl-ingest --tail 100 || true
+                echo "::error::ingest failed — a data-quality check likely did not pass"
+                exit 1 ;;
+              *) sleep 10 ;;
+            esac
+            [ "$i" = 90 ] && { echo "::error::ingest timed out"; exit 1; }
+          done
+
+      # ── 3. API ───────────────────────────────────────────────────────────
+      # Container Apps has no native traffic-split promotion step the way
+      # Cloud Run does; `containerapp update` replaces the active revision
+      # directly. The smoke test below is what stands in for the canary.
+      - name: Deploy the API
         run: |
-          gcloud run deploy ipl-platform-api \
-            --region "${{ vars.GCP_REGION }}" \
-            --image "${{ vars.ARTIFACT_REGISTRY }}/api:${{ steps.tag.outputs.sha }}" \
-            --revision-suffix "${{ steps.tag.outputs.sha }}" \
-            --no-traffic \
-            --set-env-vars "GIT_SHA=${{ steps.tag.outputs.sha }},SERVICE_VERSION=${{ steps.tag.outputs.sha }}"
+          az containerapp update \
+            --name ipl-api --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/api:${{ steps.tag.outputs.sha }}" \
+            --set-env-vars "GIT_SHA=${{ steps.tag.outputs.sha }}" "SERVICE_VERSION=${{ steps.tag.outputs.sha }}"
 
-      - name: Smoke test the new revision directly
-        id: smoke
+      - name: Smoke test the API
         run: |
           set -euo pipefail
-          url=$(gcloud run revisions describe "ipl-platform-api-${{ steps.tag.outputs.sha }}" \
-                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
-          echo "probing $url"
+          API_URL=$(az containerapp show --name ipl-api \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
+          API_URL="https://${API_URL}"
 
           # Readiness must be genuinely ok — not merely reachable. It reports
           # migration state, mart freshness and data-quality failures, so this
           # single check catches a deploy against a database that did not
           # migrate or data that did not reconcile.
-          body=$(curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$url/health/ready")
+          body=$(curl -fsS --retry 12 --retry-delay 5 --retry-all-errors "${API_URL}/health/ready")
           echo "$body"
-          echo "$body" | grep -q '"status":"ok"' || {
-            echo "::error::New revision is not ready"; exit 1;
-          }
+          echo "$body" | grep -q '"status":"ok"' || { echo "::error::API is not ready"; exit 1; }
 
-          # And the numbers must still be right.
-          curl -fsS "$url/v1/seasons/2022/points-table" \
+          curl -fsS "${API_URL}/v1/seasons/2022/points-table" \
             | grep -q '"netRunRate":0.316' || {
-            echo "::error::Points table does not match the published standings"; exit 1;
-          }
-
-      - name: Shift 10% of traffic
-        run: |
-          gcloud run services update-traffic ipl-platform-api \
-            --region "${{ vars.GCP_REGION }}" \
-            --to-revisions "ipl-platform-api-${{ steps.tag.outputs.sha }}=10"
-
-      - name: Watch error rate before promoting
-        run: |
-          # Give the canary real traffic before committing to it. A revision
-          # that fails only under load fails here rather than at 100%.
-          sleep 60
-          url=$(gcloud run services describe ipl-platform-api \
-                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
-          for i in $(seq 1 10); do
-            curl -fsS "$url/health/ready" >/dev/null || {
-              echo "::error::Canary failing; rolling back"; exit 1;
+              echo "::error::Points table does not match the published standings"; exit 1;
             }
-            sleep 2
-          done
 
-      - name: Promote to 100%
-        run: |
-          gcloud run services update-traffic ipl-platform-api \
-            --region "${{ vars.GCP_REGION }}" --to-latest
-
-      # ── 3. Web ──────────────────────────────────────────────────────────
-      #
-      # Built only now, because the API's URL is a *build-time* input to the
-      # web image and did not exist until the step above promoted it.
+      # ── 4. Web ───────────────────────────────────────────────────────────
+      # Built only now: Next inlines NEXT_PUBLIC_API_URL at build time and the
+      # API's hostname does not exist until Container Apps has provisioned it.
       - name: Build and push web against the live API URL
         run: |
           set -euo pipefail
-          api_url=$(gcloud run services describe ipl-platform-api \
-                     --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          API_URL=$(az containerapp show --name ipl-api \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
           docker buildx build --platform linux/amd64 \
             -f apps/web/Dockerfile \
-            --build-arg "NEXT_PUBLIC_API_URL=${api_url}" \
-            -t "${{ vars.ARTIFACT_REGISTRY }}/web:${{ steps.tag.outputs.sha }}" \
+            --build-arg "NEXT_PUBLIC_API_URL=https://${API_URL}" \
+            -t "${{ vars.AZURE_ACR_LOGIN_SERVER }}/web:${{ steps.tag.outputs.sha }}" \
             --cache-from "type=gha,scope=cd-web" \
             --cache-to "type=gha,mode=max,scope=cd-web" \
             --push .
@@ -178,17 +159,16 @@ jobs:
       - name: Deploy web
         id: deploy-web
         run: |
-          gcloud run deploy ipl-platform-web \
-            --region "${{ vars.GCP_REGION }}" \
-            --image "${{ vars.ARTIFACT_REGISTRY }}/web:${{ steps.tag.outputs.sha }}"
-          url=$(gcloud run services describe ipl-platform-web \
-                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          az containerapp update \
+            --name ipl-web --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/web:${{ steps.tag.outputs.sha }}"
+          WEB_URL=$(az containerapp show --name ipl-web \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
+          echo "url=https://${WEB_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Roll back on failure
         if: failure()
         run: |
-          echo "::warning::Deploy failed; returning all traffic to the previous revision"
-          gcloud run services update-traffic ipl-platform-api \
-            --region "${{ vars.GCP_REGION }}" \
-            --to-revisions "PREVIOUS=100" || true
+          echo "::warning::Deploy failed. Container Apps keeps prior revisions; the previous"
+          echo "::warning::image tag can be redeployed with: az containerapp update --name ipl-api --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --image <previous-image>"

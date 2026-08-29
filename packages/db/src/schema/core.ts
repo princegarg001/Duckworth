@@ -301,9 +301,7 @@ export const delivery = core.table(
     isWide: boolean('is_wide').generatedAlwaysAs(sql`wide_runs > 0`),
     isNoball: boolean('is_noball').generatedAlwaysAs(sql`noball_runs > 0`),
     /** A wide or no-ball does not count toward the over. */
-    isLegalBall: boolean('is_legal_ball').generatedAlwaysAs(
-      sql`wide_runs = 0 and noball_runs = 0`,
-    ),
+    isLegalBall: boolean('is_legal_ball').generatedAlwaysAs(sql`wide_runs = 0 and noball_runs = 0`),
     /** Balls faced by the striker: everything except a wide. */
     countsAsBallFaced: boolean('counts_as_ball_faced').generatedAlwaysAs(sql`wide_runs = 0`),
   },

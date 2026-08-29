@@ -440,6 +440,7 @@
         "tags": [
           "seasons"
         ],
+        "description": "Every season present in the database, most recent first.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -972,6 +973,7 @@
         "tags": [
           "teams"
         ],
+        "description": "All ten franchises. Pass `season` to restrict to teams that fielded a squad that year.",
         "parameters": [
           {
             "schema": {
@@ -1044,12 +1046,12 @@
         "tags": [
           "teams"
         ],
+        "description": "A single team by id.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -1167,6 +1169,7 @@
         "tags": [
           "teams"
         ],
+        "description": "Aggregate played/won/lost between two teams within one season.",
         "parameters": [
           {
             "schema": {
@@ -1182,8 +1185,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "a",
@@ -1192,8 +1194,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "b",
@@ -1441,6 +1442,7 @@
         "tags": [
           "venues"
         ],
+        "description": "Every ground used in the season.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -1511,8 +1513,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -1773,8 +1774,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "teamId",
@@ -1783,8 +1783,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "venueId",
@@ -2187,8 +2186,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -3123,8 +3121,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -3575,12 +3572,12 @@
         "tags": [
           "matches"
         ],
+        "description": "One point per legal delivery per innings: cumulative runs and wickets. Feeds the worm chart on the match page.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -3711,12 +3708,12 @@
         "tags": [
           "matches"
         ],
+        "description": "Runs and wickets conceded in each over, per innings. Feeds the manhattan chart on the match page.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -3841,12 +3838,12 @@
         "tags": [
           "matches"
         ],
+        "description": "Every partnership in the match, in wicket order, with the runs and balls each stand contributed.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -4061,6 +4058,7 @@
         "tags": [
           "players"
         ],
+        "description": "Paginated player search. `q` matches full or short name, case-insensitively.",
         "parameters": [
           {
             "schema": {
@@ -4107,8 +4105,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "teamId",
@@ -4280,12 +4277,12 @@
         "tags": [
           "players"
         ],
+        "description": "A player profile, including every team they were squadded to.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -4462,6 +4459,7 @@
         "tags": [
           "players"
         ],
+        "description": "Career batting figures for the player, optionally scoped to one season.",
         "parameters": [
           {
             "schema": {
@@ -4477,8 +4475,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "opponentId",
@@ -4487,8 +4484,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "venueId",
@@ -4510,8 +4506,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -4702,6 +4697,7 @@
         "tags": [
           "players"
         ],
+        "description": "Career bowling figures for the player, optionally scoped to one season.",
         "parameters": [
           {
             "schema": {
@@ -4717,8 +4713,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "opponentId",
@@ -4727,8 +4722,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "venueId",
@@ -4750,8 +4744,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -4959,8 +4952,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "opponentId",
@@ -4969,8 +4961,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "venueId",
@@ -4992,8 +4983,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -5157,6 +5147,7 @@
         "tags": [
           "players"
         ],
+        "description": "The player's last N appearances with batting and bowling figures for each.",
         "parameters": [
           {
             "schema": {
@@ -5172,8 +5163,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "path",
             "name": "id",
@@ -5358,12 +5348,12 @@
         "tags": [
           "analytics"
         ],
+        "description": "Batting, bowling and phase splits for two players side by side, for one shared season if given.",
         "parameters": [
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "playerA",
@@ -5372,8 +5362,7 @@
           {
             "schema": {
               "type": "integer",
-              "exclusiveMinimum": true,
-              "minimum": 0
+              "minimum": 1
             },
             "in": "query",
             "name": "playerB",
@@ -6202,6 +6191,7 @@
         "tags": [
           "analytics"
         ],
+        "description": "Scoring and toss profile for every venue used in the season, in one call.",
         "parameters": [
           {
             "schema": {
@@ -6381,6 +6371,7 @@
         "tags": [
           "analytics"
         ],
+        "description": "Every team-versus-team record for the season, as a flat list — build a matrix from it client-side.",
         "parameters": [
           {
             "schema": {

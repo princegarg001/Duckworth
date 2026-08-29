@@ -7,12 +7,12 @@ can be rebuilt from that table plus the migrations.
 
 ## Four schemas, four guarantees
 
-| Schema | Contents | Guarantee |
-|---|---|---|
-| `staging` | Raw landed rows | None. Disposable. |
-| `core` | Normalised truth | Aggressively constrained. Every API figure derives from here. |
-| `marts` | Ten materialised views | Rebuildable from `core` at any time. |
-| `quality` | The vendor's own aggregates | **Never served.** Exists to be asserted against. |
+| Schema    | Contents                    | Guarantee                                                     |
+| --------- | --------------------------- | ------------------------------------------------------------- |
+| `staging` | Raw landed rows             | None. Disposable.                                             |
+| `core`    | Normalised truth            | Aggressively constrained. Every API figure derives from here. |
+| `marts`   | Ten materialised views      | Rebuildable from `core` at any time.                          |
+| `quality` | The vendor's own aggregates | **Never served.** Exists to be asserted against.              |
 
 The `quality` schema is the unusual one; ADR 0005 explains why it exists.
 
@@ -68,7 +68,7 @@ There are 912 dismissals on the scorecards and 911 wicket events in the
 commentary. The missing one is Rahul Tripathi's **retired hurt** — it did not
 happen on a ball.
 
-R Ashwin's **retired out** (the first in IPL history) *does* sit on a delivery.
+R Ashwin's **retired out** (the first in IPL history) _does_ sit on a delivery.
 The two retirements are different events and collapsing them corrupts the wicket
 count.
 
@@ -172,15 +172,15 @@ CHECK (delivery_id IS NOT NULL OR kind = 'retired_hurt')
 Computed by Postgres, so no application code path can write a row that
 disagrees with itself:
 
-| Column | Definition | Why |
-|---|---|---|
-| `extra_runs` | `wide + noball + bye + legbye` | Single definition of "extras" |
-| `is_wide` | `wide_runs > 0` | |
-| `is_noball` | `noball_runs > 0` | |
-| `is_legal_ball` | `wide_runs = 0 AND noball_runs = 0` | Wides and no-balls do not count toward the over |
-| `counts_as_ball_faced` | `wide_runs = 0` | Balls faced excludes wides but **includes** no-balls |
+| Column                 | Definition                          | Why                                                  |
+| ---------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `extra_runs`           | `wide + noball + bye + legbye`      | Single definition of "extras"                        |
+| `is_wide`              | `wide_runs > 0`                     |                                                      |
+| `is_noball`            | `noball_runs > 0`                   |                                                      |
+| `is_legal_ball`        | `wide_runs = 0 AND noball_runs = 0` | Wides and no-balls do not count toward the over      |
+| `counts_as_ball_faced` | `wide_runs = 0`                     | Balls faced excludes wides but **includes** no-balls |
 
-`total_runs` is deliberately *stored*, not generated: three deliveries have
+`total_runs` is deliberately _stored_, not generated: three deliveries have
 components that do not sum, innings totals reconcile on the reported total, and
 a generated column would make those three rows unstorable.
 
@@ -198,7 +198,7 @@ single-season scan exceeds the p99 latency budget. At that size, range
 partitioning by `season_id` is the obvious first move, since every mart already
 filters by it.
 
-Knowing when *not* to reach for a technique is the same skill as knowing when to.
+Knowing when _not_ to reach for a technique is the same skill as knowing when to.
 
 ---
 
@@ -207,15 +207,15 @@ Knowing when *not* to reach for a technique is the same skill as knowing when to
 These are the ones that cost accuracy when they are wrong, and they live in
 `packages/domain` with tests rather than being re-derived per query.
 
-| Rule | Where |
-|---|---|
-| Balls faced excludes wides, includes no-balls | `counts_as_ball_faced` generated column |
-| A bowler is charged runs off the bat, wides and no-balls — never byes or leg-byes | `marts.bowling_innings` |
-| A maiden is a completed over conceding nothing chargeable; byes do not break it | `marts.bowling_innings` |
-| Run-outs and retirements are dismissals but not the bowler's wicket | `dismissal.credits_bowler` + a check |
-| Caught-and-bowled is a `caught` whose sole fielder is the bowler | `refineCaught()` |
-| Retired hurt is not a wicket lost; retired out is | `countsAsWicketLost()` |
-| Overs are base-6: `17.4 + 0.2 = 18.0` | `overs.ts`, all arithmetic in balls |
-| A side bowled out is charged its full quota for NRR | `chargeableBalls()` |
-| The points table is league-stage only | `marts.points_table`, `countsTowardStandings()` |
-| Phases are overs 1–6 / 7–15 / 16–20 (0-indexed 0–5 / 6–14 / 15–19) | `phase.ts` |
+| Rule                                                                              | Where                                           |
+| --------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Balls faced excludes wides, includes no-balls                                     | `counts_as_ball_faced` generated column         |
+| A bowler is charged runs off the bat, wides and no-balls — never byes or leg-byes | `marts.bowling_innings`                         |
+| A maiden is a completed over conceding nothing chargeable; byes do not break it   | `marts.bowling_innings`                         |
+| Run-outs and retirements are dismissals but not the bowler's wicket               | `dismissal.credits_bowler` + a check            |
+| Caught-and-bowled is a `caught` whose sole fielder is the bowler                  | `refineCaught()`                                |
+| Retired hurt is not a wicket lost; retired out is                                 | `countsAsWicketLost()`                          |
+| Overs are base-6: `17.4 + 0.2 = 18.0`                                             | `overs.ts`, all arithmetic in balls             |
+| A side bowled out is charged its full quota for NRR                               | `chargeableBalls()`                             |
+| The points table is league-stage only                                             | `marts.points_table`, `countsTowardStandings()` |
+| Phases are overs 1–6 / 7–15 / 16–20 (0-indexed 0–5 / 6–14 / 15–19)                | `phase.ts`                                      |

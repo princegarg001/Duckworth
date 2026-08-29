@@ -110,7 +110,10 @@ export async function loadBundle(handle: DbHandle, bundle: SourceBundle): Promis
   stats.teams = teamRows.length;
 
   // ── Venues ──────────────────────────────────────────────────────────────
-  const venueMap = new Map<number, { id: number; name: string; city: string | null; country: string }>();
+  const venueMap = new Map<
+    number,
+    { id: number; name: string; city: string | null; country: string }
+  >();
   for (const info of bundle.matchInfo.values()) {
     const id = asInt(info.venue.venue_id, 'venue.venue_id');
     venueMap.set(id, {
@@ -266,7 +269,8 @@ export async function loadBundle(handle: DbHandle, bundle: SourceBundle): Promis
       end_time: info.timestamp_end > 0 ? isoFromEpochSeconds(info.timestamp_end) : null,
       match_date: matchDateFromIst(info.date_start_ist),
       toss_winner_id: asIdOrNull(info.toss?.winner),
-      toss_decision: info.toss === undefined ? null : parseTossDecision(info.toss.text, info.toss.decision),
+      toss_decision:
+        info.toss === undefined ? null : parseTossDecision(info.toss.text, info.toss.decision),
       result,
       winner_id: winnerId,
       win_margin: margin,
@@ -300,7 +304,10 @@ export async function loadBundle(handle: DbHandle, bundle: SourceBundle): Promis
       official_id: officialIds.get(l.name),
       role: l.role,
     }))
-    .filter((r): r is { match_id: number; official_id: number; role: string } => r.official_id !== undefined);
+    .filter(
+      (r): r is { match_id: number; official_id: number; role: string } =>
+        r.official_id !== undefined,
+    );
   for (const batch of chunks(officialLinkRows, 1000)) {
     await sql`
       insert into core.match_official ${sql(batch)}
@@ -517,11 +524,7 @@ async function loadQualityCards(tx: Tx, card: SourceScorecardInnings): Promise<v
 }
 
 /** The published league table — the independent check on our own points table. */
-async function loadSourceStandings(
-  sql: Tx,
-  bundle: SourceBundle,
-  seasonId: number,
-): Promise<void> {
+async function loadSourceStandings(sql: Tx, bundle: SourceBundle, seasonId: number): Promise<void> {
   const group = bundle.standings.standings[0];
   if (group === undefined) return;
 

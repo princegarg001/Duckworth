@@ -10,27 +10,21 @@ import { z } from 'zod';
  * defaulting to `*` has turned it into a security one.
  */
 
-const bool = z
-  .enum(['true', 'false', '1', '0'])
-  .transform((v) => v === 'true' || v === '1');
+const bool = z.enum(['true', 'false', '1', '0']).transform((v) => v === 'true' || v === '1');
 
-const csv = z
-  .string()
-  .transform((v) =>
-    v
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0),
-  );
+const csv = z.string().transform((v) =>
+  v
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
+);
 
 export const NodeEnv = z.enum(['development', 'test', 'production']);
 export type NodeEnv = z.infer<typeof NodeEnv>;
 
 const BaseEnv = z.object({
   NODE_ENV: NodeEnv.default('development'),
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SERVICE_NAME: z.string().default('ipl-api'),
   SERVICE_VERSION: z.string().default('0.0.0-dev'),
   GIT_SHA: z.string().default('unknown'),
@@ -86,7 +80,8 @@ export const ApiEnvSchema = BaseEnv.merge(DatabaseEnv)
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['INTERNAL_API_TOKEN'],
-          message: 'INTERNAL_API_TOKEN is required in production — /internal routes must be guarded',
+          message:
+            'INTERNAL_API_TOKEN is required in production — /internal routes must be guarded',
         });
       }
       if (env.CORS_ORIGINS.some((o) => o === '*')) {

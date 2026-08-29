@@ -170,9 +170,7 @@ describe('matches', () => {
     }>(await get('/v1/matches?teamId=610&limit=50'));
 
     expect(body.data.length).toBeGreaterThan(0);
-    expect(
-      body.data.every((m) => m.teamA.team.id === 610 || m.teamB.team.id === 610),
-    ).toBe(true);
+    expect(body.data.every((m) => m.teamA.team.id === 610 || m.teamB.team.id === 610)).toBe(true);
   });
 });
 

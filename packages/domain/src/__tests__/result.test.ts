@@ -75,15 +75,16 @@ describe('deriveResult', () => {
   });
 
   it('reports a no result when there is no winner', () => {
-    expect(
-      deriveResult({ winnerTeamId: null, firstInningsBattingTeamId: 610 }),
-    ).toEqual({ kind: 'no_result', margin: null });
+    expect(deriveResult({ winnerTeamId: null, firstInningsBattingTeamId: 610 })).toEqual({
+      kind: 'no_result',
+      margin: null,
+    });
   });
 
   it('reports a tie when the scores were level', () => {
-    expect(
-      deriveResult({ winnerTeamId: 610, firstInningsBattingTeamId: 610, tied: true }),
-    ).toEqual({ kind: 'tie', margin: null });
+    expect(deriveResult({ winnerTeamId: 610, firstInningsBattingTeamId: 610, tied: true })).toEqual(
+      { kind: 'tie', margin: null },
+    );
   });
 
   it('leaves the margin null when neither source carries one', () => {
@@ -123,15 +124,15 @@ describe('deriveResult', () => {
 
 describe('disagreesWithNote', () => {
   it('flags a kind that contradicts the prose', () => {
-    expect(
-      disagreesWithNote({ kind: 'wickets', margin: 16 }, 'RCB won by 16 runs.'),
-    ).toMatch(/derived "wickets"/);
+    expect(disagreesWithNote({ kind: 'wickets', margin: 16 }, 'RCB won by 16 runs.')).toMatch(
+      /derived "wickets"/,
+    );
   });
 
   it('flags a margin that contradicts the prose', () => {
-    expect(
-      disagreesWithNote({ kind: 'runs', margin: 5 }, 'RCB won by 16 runs.'),
-    ).toMatch(/derived margin 5/);
+    expect(disagreesWithNote({ kind: 'runs', margin: 5 }, 'RCB won by 16 runs.')).toMatch(
+      /derived margin 5/,
+    );
   });
 
   it('is silent when they agree', () => {

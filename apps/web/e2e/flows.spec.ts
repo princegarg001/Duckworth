@@ -31,7 +31,10 @@ test.describe('league overview', () => {
 
   test('links a leader through to their player page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: /Jos Buttler/ }).first().click();
+    await page
+      .getByRole('link', { name: /Jos Buttler/ })
+      .first()
+      .click();
     await expect(page.getByRole('heading', { name: 'Jos Buttler' })).toBeVisible();
     await expect(page.getByText('863')).toBeVisible();
   });
@@ -113,7 +116,10 @@ test.describe('players', () => {
     await page.getByRole('searchbox').fill('Chahal');
     await page.waitForURL(/q=Chahal/);
 
-    await page.getByRole('link', { name: /Chahal/ }).first().click();
+    await page
+      .getByRole('link', { name: /Chahal/ })
+      .first()
+      .click();
     await expect(page.getByRole('heading', { name: /Chahal/ })).toBeVisible();
 
     // A leg-spinner who bowled in all three phases.
@@ -143,9 +149,7 @@ test.describe('accessibility', () => {
       // Print what failed rather than just a count, so a failure is actionable
       // from the CI log alone.
       if (blocking.length > 0) {
-        console.error(
-          blocking.map((v) => `${v.impact}: ${v.id} — ${v.help}`).join('\n'),
-        );
+        console.error(blocking.map((v) => `${v.impact}: ${v.id} — ${v.help}`).join('\n'));
       }
       expect(blocking).toEqual([]);
     });

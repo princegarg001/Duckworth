@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 
-
 import { createDb, type DbHandle } from './client.js';
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -60,7 +60,9 @@ export interface HealthDeps {
   readonly martStalenessThresholdSeconds: number;
 }
 
-async function timed<T>(fn: () => Promise<T>): Promise<{ ms: number; value: T | null; error: string | null }> {
+async function timed<T>(
+  fn: () => Promise<T>,
+): Promise<{ ms: number; value: T | null; error: string | null }> {
   const started = Date.now();
   try {
     const value = await fn();
@@ -91,7 +93,10 @@ export async function healthRoutes(fastify: FastifyInstance, deps: HealthDeps): 
         },
       },
     },
-    async () => ({ status: 'ok' as const, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) }),
+    async () => ({
+      status: 'ok' as const,
+      uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+    }),
   );
 
   app.get(
@@ -172,7 +177,12 @@ export async function healthRoutes(fastify: FastifyInstance, deps: HealthDeps): 
         marts.error !== null
           ? { status: 'down' as const, detail: marts.error }
           : age === null
-            ? { status: 'degraded' as const, lastRefresh: null, ageSeconds: null, detail: 'no mart has been refreshed' }
+            ? {
+                status: 'degraded' as const,
+                lastRefresh: null,
+                ageSeconds: null,
+                detail: 'no mart has been refreshed',
+              }
             : age > deps.martStalenessThresholdSeconds
               ? {
                   status: 'degraded' as const,
@@ -206,7 +216,11 @@ export async function healthRoutes(fastify: FastifyInstance, deps: HealthDeps): 
       // Down on any hard dependency; degraded is still servable.
       const anyDown = Object.values(checks).some((c) => c.status === 'down');
       const anyDegraded = Object.values(checks).some((c) => c.status === 'degraded');
-      const status = anyDown ? ('down' as const) : anyDegraded ? ('degraded' as const) : ('ok' as const);
+      const status = anyDown
+        ? ('down' as const)
+        : anyDegraded
+          ? ('degraded' as const)
+          : ('ok' as const);
 
       const body = {
         status,

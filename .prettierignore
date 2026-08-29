@@ -7,3 +7,7 @@ packages/db/migrations/
 packages/contracts/openapi.json
 apps/web/src/lib/api-types.ts
 data/
+
+# Helm chart templates use Go template syntax ({{ ... }}), which is not valid
+# YAML and cannot be parsed by Prettier's YAML formatter.
+infra/helm/**/templates/**

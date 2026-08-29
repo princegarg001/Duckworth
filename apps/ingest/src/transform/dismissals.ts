@@ -89,7 +89,11 @@ export function transformDismissals(
     fallbackWicketNumber += 1;
 
     const fielders: DismissalRow['fielders'] = [];
-    const fielderIds = [firstFielderId, asIdOrNull(b.second_fielder_id), asIdOrNull(b.third_fielder_id)];
+    const fielderIds = [
+      firstFielderId,
+      asIdOrNull(b.second_fielder_id),
+      asIdOrNull(b.third_fielder_id),
+    ];
     for (const [i, pid] of fielderIds.entries()) {
       if (pid === null) continue;
       // For a caught-and-bowled the "fielder" is the bowler, already credited

@@ -27,7 +27,7 @@ Two concrete benefits:
    so any figure the API serves can be traced back to its origin without a join.
 
 `delivery` is the exception because the source has no per-delivery key we own —
-but it *does* carry a globally unique `event_id` across all 17,912 rows, which
+but it _does_ carry a globally unique `event_id` across all 17,912 rows, which
 is stored and constrained `UNIQUE` for the same traceability reason.
 
 ## Consequences

@@ -106,7 +106,10 @@ export default async function OverviewPage() {
                 </caption>
                 <thead>
                   <tr className="border-b border-line">
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-ink-muted">
+                    <th
+                      scope="col"
+                      className="px-4 py-2 text-left text-xs font-medium text-ink-muted"
+                    >
                       #
                     </th>
                     <th scope="col" className="py-2 text-left text-xs font-medium text-ink-muted">
@@ -135,7 +138,11 @@ export default async function OverviewPage() {
                           href={`/teams/${row.team.id}`}
                           className="hover:underline underline-offset-2"
                         >
-                          <TeamBadge shortName={row.team.shortName} name={row.team.name} size="sm" />
+                          <TeamBadge
+                            shortName={row.team.shortName}
+                            name={row.team.name}
+                            size="sm"
+                          />
                         </Link>
                       </td>
                       <td className="px-3 py-2 text-right text-ink-muted">{row.played}</td>

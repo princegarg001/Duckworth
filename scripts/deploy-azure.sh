@@ -18,6 +18,9 @@
 #   az login
 #   ./scripts/deploy-azure.sh
 #
+# Requires Docker running locally: `az acr build` (ACR Tasks) is disabled on
+# Azure for Students subscriptions, so images are built here and pushed to
+# ACR rather than built remotely.
 # Everything is idempotent — re-running redeploys the current commit.
 
 set -euo pipefail
@@ -75,8 +78,6 @@ fi
 [ -z "${PG_SERVER:-}" ] && PG_SERVER="ipl-pg-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 
 # ── Container registry ──────────────────────────────────────────────────────
-# Basic tier. `az acr build` builds *in Azure*, so no local Docker is needed and
-# there is no chance of accidentally pushing an arm64 image that will not run.
 say "Container registry ${ACR}"
 if ! az acr show -n "$ACR" -g "$RG" >/dev/null 2>&1; then
   az acr create -n "$ACR" -g "$RG" --sku Basic --admin-enabled true --only-show-errors -o none
@@ -115,11 +116,24 @@ az postgres flexible-server update -n "$PG_SERVER" -g "$RG" \
 PG_HOST="$(az postgres flexible-server show -n "$PG_SERVER" -g "$RG" --query fullyQualifiedDomainName -o tsv)"
 DATABASE_URL="postgres://${PG_ADMIN}:${PG_PASSWORD}@${PG_HOST}:5432/${PG_DB}?sslmode=require"
 
-# ── Build images in Azure ───────────────────────────────────────────────────
-say "Building api and ingest images in ACR"
+# ── Build images ─────────────────────────────────────────────────────────
+# `az acr build` (ACR Tasks) is blocked on Azure for Students subscriptions —
+# "TasksOperationsNotAllowed" — so images are built locally with Docker and
+# pushed instead. linux/amd64 explicitly: Container Apps does not run arm64,
+# and building on an arm64 host without this flag produces an image that
+# pushes fine and then fails to start with an exec-format error.
+command -v docker >/dev/null || die "Docker is required to build locally (ACR remote build is not available on this subscription type)"
+docker info >/dev/null 2>&1 || die "Docker daemon is not running"
+
+say "Logging Docker in to ${ACR_SERVER}"
+az acr login --name "$ACR" --only-show-errors -o none
+
+say "Building and pushing api and ingest images"
 for svc in api ingest; do
-  az acr build --registry "$ACR" --image "${svc}:${TAG}" \
-    --file "apps/${svc}/Dockerfile" . --only-show-errors -o none
+  docker buildx build --platform linux/amd64 \
+    -f "apps/${svc}/Dockerfile" \
+    -t "${ACR_SERVER}/${svc}:${TAG}" \
+    --push .
 done
 
 # ── Container Apps environment ──────────────────────────────────────────────
@@ -203,11 +217,12 @@ curl -fsS "${API_URL}/v1/seasons/2022/points-table" \
 # ── Web ─────────────────────────────────────────────────────────────────────
 # Built only now: Next inlines NEXT_PUBLIC_API_URL at build time, and the API's
 # hostname does not exist until Container Apps has provisioned ingress.
-say "Building the web image against ${API_URL}"
-az acr build --registry "$ACR" --image "web:${TAG}" \
-  --file apps/web/Dockerfile \
+say "Building and pushing the web image against ${API_URL}"
+docker buildx build --platform linux/amd64 \
+  -f apps/web/Dockerfile \
   --build-arg "NEXT_PUBLIC_API_URL=${API_URL}" \
-  . --only-show-errors -o none
+  -t "${ACR_SERVER}/web:${TAG}" \
+  --push .
 
 say "Deploying the web application"
 az containerapp create \

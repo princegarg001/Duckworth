@@ -2,7 +2,14 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { api, unwrap, ApiProblem, SERVER_CACHE } from '../../../lib/api';
-import { Card, PageHeader, Rate, Signed, StatTile, TeamBadge } from '../../../components/primitives';
+import {
+  Card,
+  PageHeader,
+  Rate,
+  Signed,
+  StatTile,
+  TeamBadge,
+} from '../../../components/primitives';
 import { EmptyState } from '../../../components/states';
 
 /**
@@ -72,7 +79,9 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
       <PageHeader
         eyebrow={team.shortName}
         title={team.name}
-        subtitle={row === undefined ? undefined : `Finished ${ordinal(row.position)} in the league stage`}
+        subtitle={
+          row === undefined ? undefined : `Finished ${ordinal(row.position)} in the league stage`
+        }
       />
 
       {row !== undefined && (
@@ -97,7 +106,10 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
               <caption className="sr-only">Head-to-head record against each opponent</caption>
               <thead>
                 <tr className="border-b border-line">
-                  <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-ink-muted">
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-ink-muted"
+                  >
                     Opponent
                   </th>
                   {['P', 'W', 'L', 'Win %'].map((h) => (
@@ -120,12 +132,17 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                         {opp === undefined ? (
                           o.opponentId
                         ) : (
-                          <Link href={`/teams/${opp.id}`} className="hover:underline underline-offset-2">
+                          <Link
+                            href={`/teams/${opp.id}`}
+                            className="hover:underline underline-offset-2"
+                          >
                             <TeamBadge shortName={opp.shortName} name={opp.name} size="sm" />
                           </Link>
                         )}
                       </th>
-                      <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{o.played}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink-muted">
+                        {o.played}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums font-medium">{o.won}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{o.lost}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
@@ -178,7 +195,9 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                         {opponentSide.runs ?? '—'}
                         {opponentSide.runs !== null && `/${opponentSide.wickets}`}
                       </span>
-                      <span className="sr-only">{won ? 'Won' : decided ? 'Lost' : 'No result'}</span>
+                      <span className="sr-only">
+                        {won ? 'Won' : decided ? 'Lost' : 'No result'}
+                      </span>
                     </Link>
                   </li>
                 );

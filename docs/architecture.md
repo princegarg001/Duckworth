@@ -123,19 +123,19 @@ atomic, and leaves exactly that window open.
 
 ### What is exposed
 
-| Surface | Exposure | Control |
-|---|---|---|
-| `GET /v1/*` | Public, read-only | Rate limit, body limit, request timeout, `statement_timeout` |
-| `POST /internal/*` | Public route, token-gated | Shared secret from Secret Manager; **required** in production or the process refuses to start |
-| `/docs`, `/openapi.json` | Public | Intentional. The data is public |
-| `/metrics` | Should not be public | Scraped in-cluster; not exposed through the Ingress rules |
-| PostgreSQL | Private IP only | VPC connector; no public address |
-| Redis | In-cluster | NetworkPolicy egress allowlist |
+| Surface                  | Exposure                  | Control                                                                                       |
+| ------------------------ | ------------------------- | --------------------------------------------------------------------------------------------- |
+| `GET /v1/*`              | Public, read-only         | Rate limit, body limit, request timeout, `statement_timeout`                                  |
+| `POST /internal/*`       | Public route, token-gated | Shared secret from Secret Manager; **required** in production or the process refuses to start |
+| `/docs`, `/openapi.json` | Public                    | Intentional. The data is public                                                               |
+| `/metrics`               | Should not be public      | Scraped in-cluster; not exposed through the Ingress rules                                     |
+| PostgreSQL               | Private IP only           | VPC connector; no public address                                                              |
+| Redis                    | In-cluster                | NetworkPolicy egress allowlist                                                                |
 
 ### What is trusted
 
 - **The dataset.** Read-only, from a known location, hashed on ingest. Its
-  *contents* are explicitly not trusted — the 23 checks exist because the source
+  _contents_ are explicitly not trusted — the 23 checks exist because the source
   is wrong in eight identified ways.
 - **The cluster network**, to the extent the NetworkPolicy allows: DNS,
   Postgres, Redis, the OTLP collector. Nothing else, including the cloud
@@ -152,13 +152,13 @@ atomic, and leaves exactly that window open.
 
 ### Known gaps, and what they would cost
 
-| Gap | Why it is acceptable here | What closing it needs |
-|---|---|---|
-| **No authentication** | Public dataset, read-only API | OIDC via `@fastify/jwt`, per-key rate limits. The plugin seams exist at `apps/api/src/plugins/` |
-| **No per-tenant isolation** | Single tenant | Row-level security on `core`, tenant claim in the token, tenant in the cache key namespace |
-| **No audit log** | Nothing mutates | An append-only table on write paths, which would first require write paths |
-| **No WAF** | Rate limiting and body limits cover the realistic abuse | Cloud Armor or equivalent in front of the load balancer |
-| **Secrets rotate manually** | Single environment | ExternalSecrets `refreshInterval` is already 1h; rotation needs a scheduled Secret Manager version bump |
+| Gap                         | Why it is acceptable here                               | What closing it needs                                                                                   |
+| --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **No authentication**       | Public dataset, read-only API                           | OIDC via `@fastify/jwt`, per-key rate limits. The plugin seams exist at `apps/api/src/plugins/`         |
+| **No per-tenant isolation** | Single tenant                                           | Row-level security on `core`, tenant claim in the token, tenant in the cache key namespace              |
+| **No audit log**            | Nothing mutates                                         | An append-only table on write paths, which would first require write paths                              |
+| **No WAF**                  | Rate limiting and body limits cover the realistic abuse | Cloud Armor or equivalent in front of the load balancer                                                 |
+| **Secrets rotate manually** | Single environment                                      | ExternalSecrets `refreshInterval` is already 1h; rotation needs a scheduled Secret Manager version bump |
 
 ### Supply chain
 

@@ -188,7 +188,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List seasons */
+        /**
+         * List seasons
+         * @description Every season present in the database, most recent first.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -447,7 +450,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List teams */
+        /**
+         * List teams
+         * @description All ten franchises. Pass `season` to restrict to teams that fielded a squad that year.
+         */
         get: {
             parameters: {
                 query?: {
@@ -494,7 +500,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a team */
+        /**
+         * Get a team
+         * @description A single team by id.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -567,7 +576,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Head-to-head record between two teams */
+        /**
+         * Head-to-head record between two teams
+         * @description Aggregate played/won/lost between two teams within one season.
+         */
         get: {
             parameters: {
                 query: {
@@ -688,7 +700,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List venues */
+        /**
+         * List venues
+         * @description Every ground used in the season.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1400,7 +1415,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Cumulative score by ball (worm chart) */
+        /**
+         * Cumulative score by ball (worm chart)
+         * @description One point per legal delivery per innings: cumulative runs and wickets. Feeds the worm chart on the match page.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1478,7 +1496,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Runs and wickets per over (manhattan chart) */
+        /**
+         * Runs and wickets per over (manhattan chart)
+         * @description Runs and wickets conceded in each over, per innings. Feeds the manhattan chart on the match page.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1553,7 +1574,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Partnerships by wicket */
+        /**
+         * Partnerships by wicket
+         * @description Every partnership in the match, in wicket order, with the runs and balls each stand contributed.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1647,7 +1671,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search players */
+        /**
+         * Search players
+         * @description Paginated player search. `q` matches full or short name, case-insensitively.
+         */
         get: {
             parameters: {
                 query?: {
@@ -1737,7 +1764,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a player */
+        /**
+         * Get a player
+         * @description A player profile, including every team they were squadded to.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1822,7 +1852,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Batting record */
+        /**
+         * Batting record
+         * @description Career batting figures for the player, optionally scoped to one season.
+         */
         get: {
             parameters: {
                 query?: {
@@ -1918,7 +1951,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bowling record */
+        /**
+         * Bowling record
+         * @description Career bowling figures for the player, optionally scoped to one season.
+         */
         get: {
             parameters: {
                 query?: {
@@ -2106,7 +2142,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Recent form */
+        /**
+         * Recent form
+         * @description The player's last N appearances with batting and bowling figures for each.
+         */
         get: {
             parameters: {
                 query?: {
@@ -2195,7 +2234,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Compare two players */
+        /**
+         * Compare two players
+         * @description Batting, bowling and phase splits for two players side by side, for one shared season if given.
+         */
         get: {
             parameters: {
                 query: {
@@ -2443,7 +2485,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** All venue profiles for a season */
+        /**
+         * All venue profiles for a season
+         * @description Scoring and toss profile for every venue used in the season, in one call.
+         */
         get: {
             parameters: {
                 query: {
@@ -2529,7 +2574,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Full head-to-head matrix for a season */
+        /**
+         * Full head-to-head matrix for a season
+         * @description Every team-versus-team record for the season, as a flat list — build a matrix from it client-side.
+         */
         get: {
             parameters: {
                 query: {

@@ -40,15 +40,11 @@ export default async function MatchesPage({
     limit: 25,
     ...(params['teamId'] !== undefined ? { teamId: Number(params['teamId']) } : {}),
     ...(params['venueId'] !== undefined ? { venueId: Number(params['venueId']) } : {}),
-    ...(params['stage'] !== undefined
-      ? { stage: params['stage'] as 'league' | 'final' }
-      : {}),
+    ...(params['stage'] !== undefined ? { stage: params['stage'] as 'league' | 'final' } : {}),
     ...(params['cursor'] !== undefined ? { cursor: params['cursor'] } : {}),
   };
 
-  const matches = await api
-    .GET('/v1/matches', { params: { query }, ...SERVER_CACHE })
-    .then(unwrap);
+  const matches = await api.GET('/v1/matches', { params: { query }, ...SERVER_CACHE }).then(unwrap);
 
   const nextHref = (() => {
     if (matches.page.nextCursor === null) return null;
@@ -150,7 +146,11 @@ function ScoreLine({
       <span className={won ? 'font-semibold text-ink' : 'text-ink-muted'}>
         <TeamBadge shortName={side.team.shortName} name={side.team.name} size="sm" />
       </span>
-      <span className={won ? 'shrink-0 font-semibold tabular-nums' : 'shrink-0 tabular-nums text-ink-muted'}>
+      <span
+        className={
+          won ? 'shrink-0 font-semibold tabular-nums' : 'shrink-0 tabular-nums text-ink-muted'
+        }
+      >
         {side.runs === null ? (
           <span className="text-ink-faint">did not bat</span>
         ) : (

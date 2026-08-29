@@ -44,7 +44,7 @@ to every one of those failure modes at once.
 - Storage cost is trivial and the boundary is explicit, so nobody can serve a
   `quality` row by accident.
 - Checks carry a severity. `vendor_extras_components_self_consistent` is
-  `warn`, because it flags a defect in the *source* — one innings whose extras
+  `warn`, because it flags a defect in the _source_ — one innings whose extras
   components sum to 12 against its own stated total of 11 — rather than in our
   derivation. It stays visible on every run without blocking a deploy, and it
   starts failing if the source ever changes.

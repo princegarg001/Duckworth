@@ -5,8 +5,8 @@ import { CursorQuery, MatchStage, Phase, SeasonYear } from './common.js';
 
 export const MatchListQuery = CursorQuery.extend({
   season: SeasonYear.optional(),
-  teamId: z.coerce.number().int().positive().optional(),
-  venueId: z.coerce.number().int().positive().optional(),
+  teamId: z.coerce.number().int().min(1).optional(),
+  venueId: z.coerce.number().int().min(1).optional(),
   stage: MatchStage.optional(),
   from: z
     .string()
@@ -23,7 +23,7 @@ export type MatchListQuery = z.infer<typeof MatchListQuery>;
 export const PlayerListQuery = CursorQuery.extend({
   q: z.string().trim().min(1).max(64).optional().describe('Case-insensitive name search'),
   season: SeasonYear.optional(),
-  teamId: z.coerce.number().int().positive().optional(),
+  teamId: z.coerce.number().int().min(1).optional(),
   role: z.string().max(32).optional(),
 });
 export type PlayerListQuery = z.infer<typeof PlayerListQuery>;
@@ -79,8 +79,8 @@ export const DEFAULT_MIN_BALLS: Readonly<Record<LeaderMetric, number>> = {
 
 export const PlayerStatsQuery = z.object({
   season: SeasonYear.optional(),
-  opponentId: z.coerce.number().int().positive().optional(),
-  venueId: z.coerce.number().int().positive().optional(),
+  opponentId: z.coerce.number().int().min(1).optional(),
+  venueId: z.coerce.number().int().min(1).optional(),
   phase: Phase.optional(),
 });
 
@@ -89,7 +89,7 @@ export const FormQuery = z.object({
 });
 
 export const CompareQuery = z.object({
-  playerA: z.coerce.number().int().positive(),
-  playerB: z.coerce.number().int().positive(),
+  playerA: z.coerce.number().int().min(1),
+  playerB: z.coerce.number().int().min(1),
   season: SeasonYear.optional(),
 });

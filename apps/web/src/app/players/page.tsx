@@ -47,10 +47,7 @@ export default async function PlayersPage({
 
   return (
     <>
-      <PageHeader
-        title="Players"
-        subtitle="247 players appeared in IPL 2022."
-      />
+      <PageHeader title="Players" subtitle="247 players appeared in IPL 2022." />
 
       <PlayerSearch />
 

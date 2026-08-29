@@ -10,7 +10,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "openapi:emit": "tsx src/openapi-emit.ts",
-    "test:unit": "vitest run --coverage --dir src",
+    "test:unit": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {

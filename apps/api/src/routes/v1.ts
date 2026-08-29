@@ -113,13 +113,20 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['seasons'],
         summary: 'List seasons',
+        description: 'Every season present in the database, most recent first.',
         response: { 200: collection(Season) },
       },
     },
     async (request, reply) => {
-      await cached(request, reply, ['seasons'], async () => ({ data: await refRepo.listSeasons(sql) }), {
-        maxAge: 300,
-      });
+      await cached(
+        request,
+        reply,
+        ['seasons'],
+        async () => ({ data: await refRepo.listSeasons(sql) }),
+        {
+          maxAge: 300,
+        },
+      );
     },
   );
 
@@ -175,6 +182,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['teams'],
         summary: 'List teams',
+        description:
+          'All ten franchises. Pass `season` to restrict to teams that fielded a squad that year.',
         querystring: z.object({ season: SeasonYear.optional() }),
         response: { 200: collection(Team) },
       },
@@ -192,7 +201,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['teams'],
         summary: 'Get a team',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description: 'A single team by id.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: { 200: Team, 404: Problem },
       },
     },
@@ -209,9 +219,10 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['teams'],
         summary: 'Head-to-head record between two teams',
+        description: 'Aggregate played/won/lost between two teams within one season.',
         params: z.object({
-          a: z.coerce.number().int().positive(),
-          b: z.coerce.number().int().positive(),
+          a: z.coerce.number().int().min(1),
+          b: z.coerce.number().int().min(1),
         }),
         querystring: z.object({ season: SeasonYear }),
         response: { 200: HeadToHead, 404: Problem, 422: Problem },
@@ -246,12 +257,23 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
   app.get(
     '/v1/venues',
     {
-      schema: { tags: ['venues'], summary: 'List venues', response: { 200: collection(Venue) } },
+      schema: {
+        tags: ['venues'],
+        summary: 'List venues',
+        description: 'Every ground used in the season.',
+        response: { 200: collection(Venue) },
+      },
     },
     async (request, reply) => {
-      await cached(request, reply, ['venues'], async () => ({ data: await refRepo.listVenues(sql) }), {
-        maxAge: 300,
-      });
+      await cached(
+        request,
+        reply,
+        ['venues'],
+        async () => ({ data: await refRepo.listVenues(sql) }),
+        {
+          maxAge: 300,
+        },
+      );
     },
   );
 
@@ -263,7 +285,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
         summary: 'Venue profile',
         description:
           'Average first-innings score, chase success rate and toss impact — the questions asked at the toss.',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: z.object({ season: SeasonYear }),
         response: { 200: VenueProfile, 404: Problem, 422: Problem },
       },
@@ -273,7 +295,12 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       const rows = await refRepo.getVenueProfiles(sql, seasonId, request.params.id);
       const profile = rows[0];
       if (profile === undefined) throw ApiError.notFound('venue profile', request.params.id);
-      await cached(request, reply, ['venue', request.params.id, request.query.season], async () => profile);
+      await cached(
+        request,
+        reply,
+        ['venue', request.params.id, request.query.season],
+        async () => profile,
+      );
     },
   );
 
@@ -312,7 +339,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
         summary: 'Full scorecard',
         description:
           'Both innings with batting, bowling, fall of wickets and partnerships. Assembled in a fixed number of queries regardless of how many innings the match had.',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: { 200: MatchDetail, 404: Problem },
       },
     },
@@ -333,7 +360,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
         summary: 'Ball-by-ball',
         description:
           'Ordered by `deliverySeq`, which is monotonic within an innings. `(over, ballInOver)` is deliberately NOT unique — the source repeats the ball number on a wide or no-ball.',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: DeliveryListQuery,
         response: { 200: paginated(Delivery), 404: Problem, 422: Problem },
       },
@@ -365,19 +392,31 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
           over: r.over_no,
           ballInOver: r.ball_in_over,
           striker: toPlayerSummary({
-            player_id: r.s_id, full_name: r.s_full, short_name: r.s_short,
-            country_code: r.s_country, playing_role: r.s_role,
-            batting_style: r.s_bat, bowling_style: r.s_bowl,
+            player_id: r.s_id,
+            full_name: r.s_full,
+            short_name: r.s_short,
+            country_code: r.s_country,
+            playing_role: r.s_role,
+            batting_style: r.s_bat,
+            bowling_style: r.s_bowl,
           }),
           nonStriker: toPlayerSummary({
-            player_id: r.n_id, full_name: r.n_full, short_name: r.n_short,
-            country_code: r.n_country, playing_role: r.n_role,
-            batting_style: r.n_bat, bowling_style: r.n_bowl,
+            player_id: r.n_id,
+            full_name: r.n_full,
+            short_name: r.n_short,
+            country_code: r.n_country,
+            playing_role: r.n_role,
+            batting_style: r.n_bat,
+            bowling_style: r.n_bowl,
           }),
           bowler: toPlayerSummary({
-            player_id: r.b_id, full_name: r.b_full, short_name: r.b_short,
-            country_code: r.b_country, playing_role: r.b_role,
-            batting_style: r.b_bat, bowling_style: r.b_bowl,
+            player_id: r.b_id,
+            full_name: r.b_full,
+            short_name: r.b_short,
+            country_code: r.b_country,
+            playing_role: r.b_role,
+            batting_style: r.b_bat,
+            bowling_style: r.b_bowl,
           }),
           batRuns: r.bat_runs,
           extraRuns: r.extra_runs,
@@ -393,9 +432,13 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
               : {
                   kind: r.wicket_kind as 'caught',
                   playerOut: toPlayerSummary({
-                    player_id: r.o_id, full_name: r.o_full ?? '', short_name: r.o_short ?? '',
-                    country_code: r.o_country, playing_role: r.o_role,
-                    batting_style: r.o_bat, bowling_style: r.o_bowl,
+                    player_id: r.o_id,
+                    full_name: r.o_full ?? '',
+                    short_name: r.o_short ?? '',
+                    country_code: r.o_country,
+                    playing_role: r.o_role,
+                    batting_style: r.o_bat,
+                    bowling_style: r.o_bowl,
                   }),
                   howOut: r.wicket_how_out,
                 },
@@ -412,25 +455,33 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['matches'],
         summary: 'Cumulative score by ball (worm chart)',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description:
+          'One point per legal delivery per innings: cumulative runs and wickets. Feeds the worm chart on the match page.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: { 200: collection(WormPoint), 404: Problem },
       },
     },
     async (request, reply) => {
       const match = await matchesRepo.findMatch(sql, request.params.id);
       if (match === null) throw ApiError.notFound('match', request.params.id);
-      await cached(request, reply, ['worm', request.params.id], async () => {
-        const rows = await matchesRepo.getWorm(sql, request.params.id);
-        return {
-          data: rows.map((r) => ({
-            inningsNo: r.innings_no,
-            ballNumber: int(r.ball_number),
-            overs: oversText(int(r.ball_number)),
-            runs: int(r.runs),
-            wickets: int(r.wickets),
-          })),
-        };
-      }, { maxAge: 300 });
+      await cached(
+        request,
+        reply,
+        ['worm', request.params.id],
+        async () => {
+          const rows = await matchesRepo.getWorm(sql, request.params.id);
+          return {
+            data: rows.map((r) => ({
+              inningsNo: r.innings_no,
+              ballNumber: int(r.ball_number),
+              overs: oversText(int(r.ball_number)),
+              runs: int(r.runs),
+              wickets: int(r.wickets),
+            })),
+          };
+        },
+        { maxAge: 300 },
+      );
     },
   );
 
@@ -440,24 +491,32 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['matches'],
         summary: 'Runs and wickets per over (manhattan chart)',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description:
+          'Runs and wickets conceded in each over, per innings. Feeds the manhattan chart on the match page.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: { 200: collection(ManhattanBar), 404: Problem },
       },
     },
     async (request, reply) => {
       const match = await matchesRepo.findMatch(sql, request.params.id);
       if (match === null) throw ApiError.notFound('match', request.params.id);
-      await cached(request, reply, ['manhattan', request.params.id], async () => {
-        const rows = await matchesRepo.getManhattan(sql, request.params.id);
-        return {
-          data: rows.map((r) => ({
-            inningsNo: r.innings_no,
-            over: r.over_no + 1,
-            runs: int(r.runs),
-            wickets: int(r.wickets),
-          })),
-        };
-      }, { maxAge: 300 });
+      await cached(
+        request,
+        reply,
+        ['manhattan', request.params.id],
+        async () => {
+          const rows = await matchesRepo.getManhattan(sql, request.params.id);
+          return {
+            data: rows.map((r) => ({
+              inningsNo: r.innings_no,
+              over: r.over_no + 1,
+              runs: int(r.runs),
+              wickets: int(r.wickets),
+            })),
+          };
+        },
+        { maxAge: 300 },
+      );
     },
   );
 
@@ -467,7 +526,9 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['matches'],
         summary: 'Partnerships by wicket',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description:
+          'Every partnership in the match, in wicket order, with the runs and balls each stand contributed.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: {
           200: collection(PartnershipLine.extend({ inningsNo: z.number().int() })),
           404: Problem,
@@ -493,6 +554,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['players'],
         summary: 'Search players',
+        description: 'Paginated player search. `q` matches full or short name, case-insensitively.',
         querystring: PlayerListQuery,
         response: { 200: paginated(PlayerSummary), 422: Problem },
       },
@@ -516,7 +578,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['players'],
         summary: 'Get a player',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description: 'A player profile, including every team they were squadded to.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         response: { 200: Player, 404: Problem },
       },
     },
@@ -533,7 +596,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['players'],
         summary: 'Batting record',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description: 'Career batting figures for the player, optionally scoped to one season.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: PlayerStatsQuery,
         response: { 200: BattingCareer, 404: Problem },
       },
@@ -553,7 +617,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['players'],
         summary: 'Bowling record',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description: 'Career bowling figures for the player, optionally scoped to one season.',
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: PlayerStatsQuery,
         response: { 200: BowlingCareer, 404: Problem },
       },
@@ -575,7 +640,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
         summary: 'Powerplay / middle / death splits',
         description:
           'Overs 1–6, 7–15 and 16–20. Answers the question every T20 discussion turns into: is this a death bowler?',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: PlayerStatsQuery,
         response: { 200: collection(PhaseSplit), 404: Problem },
       },
@@ -595,7 +660,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['players'],
         summary: 'Recent form',
-        params: z.object({ id: z.coerce.number().int().positive() }),
+        description: "The player's last N appearances with batting and bowling figures for each.",
+        params: z.object({ id: z.coerce.number().int().min(1) }),
         querystring: z.object({ last: z.coerce.number().int().min(1).max(20).default(5) }),
         response: { 200: collection(FormEntry), 404: Problem },
       },
@@ -632,6 +698,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['analytics'],
         summary: 'Compare two players',
+        description:
+          'Batting, bowling and phase splits for two players side by side, for one shared season if given.',
         querystring: CompareQuery,
         response: {
           200: z.object({
@@ -666,7 +734,13 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
           playersRepo.getBowlingCareer(sql, id, seasonId),
           playersRepo.getPhaseSplits(sql, id, seasonId),
         ]);
-        const { teams: _teams, birthdate: _b, birthplace: _p, nationality: _n, ...summary } = player;
+        const {
+          teams: _teams,
+          birthdate: _b,
+          birthplace: _p,
+          nationality: _n,
+          ...summary
+        } = player;
         return { player: summary, batting, bowling, phases };
       };
 
@@ -681,6 +755,7 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['analytics'],
         summary: 'All venue profiles for a season',
+        description: 'Scoring and toss profile for every venue used in the season, in one call.',
         querystring: z.object({ season: SeasonYear }),
         response: { 200: collection(VenueProfile), 404: Problem },
       },
@@ -699,6 +774,8 @@ export async function v1Routes(fastify: FastifyInstance, deps: RouteDeps): Promi
       schema: {
         tags: ['analytics'],
         summary: 'Full head-to-head matrix for a season',
+        description:
+          'Every team-versus-team record for the season, as a flat list — build a matrix from it client-side.',
         querystring: z.object({ season: SeasonYear }),
         response: {
           200: collection(

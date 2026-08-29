@@ -41,12 +41,24 @@ export async function listTeams(sql: Sql, seasonYear?: number) {
   const rows =
     seasonYear === undefined
       ? await sql<
-          { id: number; name: string; short_name: string; country: string | null; logo_url: string | null }[]
+          {
+            id: number;
+            name: string;
+            short_name: string;
+            country: string | null;
+            logo_url: string | null;
+          }[]
         >`
           select id, name, short_name, country, logo_url from core.team order by name
         `
       : await sql<
-          { id: number; name: string; short_name: string; country: string | null; logo_url: string | null }[]
+          {
+            id: number;
+            name: string;
+            short_name: string;
+            country: string | null;
+            logo_url: string | null;
+          }[]
         >`
           select distinct t.id, t.name, t.short_name, t.country, t.logo_url
           from core.team t
@@ -66,7 +78,13 @@ export async function listTeams(sql: Sql, seasonYear?: number) {
 
 export async function findTeam(sql: Sql, id: number) {
   const rows = await sql<
-    { id: number; name: string; short_name: string; country: string | null; logo_url: string | null }[]
+    {
+      id: number;
+      name: string;
+      short_name: string;
+      country: string | null;
+      logo_url: string | null;
+    }[]
   >`
     select id, name, short_name, country, logo_url from core.team where id = ${id}
   `;
@@ -177,7 +195,12 @@ export async function getVenueProfiles(sql: Sql, seasonId: number, venueId?: num
   }));
 }
 
-export async function getHeadToHead(sql: Sql, seasonId: number, teamId: number, opponentId: number) {
+export async function getHeadToHead(
+  sql: Sql,
+  seasonId: number,
+  teamId: number,
+  opponentId: number,
+) {
   const rows = await sql<
     {
       played: number;

@@ -44,7 +44,10 @@ export default async function VenuesPage() {
               </caption>
               <thead>
                 <tr className="border-b border-line">
-                  <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-ink-muted">
+                  <th
+                    scope="col"
+                    className="px-4 py-2 text-left text-xs font-medium text-ink-muted"
+                  >
                     Venue
                   </th>
                   {[

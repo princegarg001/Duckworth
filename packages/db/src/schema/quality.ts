@@ -148,6 +148,9 @@ export const checkResult = quality.table(
   (t) => [
     index('check_result_run_idx').on(t.ingestRunId),
     index('check_result_ran_at_idx').on(t.ranAt.desc()),
-    check('check_result_pass_has_no_violations', sql`${t.status} <> 'pass' or ${t.violationCount} = 0`),
+    check(
+      'check_result_pass_has_no_violations',
+      sql`${t.status} <> 'pass' or ${t.violationCount} = 0`,
+    ),
   ],
 );

@@ -7,20 +7,20 @@ in six months.
 
 ## Reading `/health/ready`
 
-The single most useful URL. It reports whether the service can serve *and*
+The single most useful URL. It reports whether the service can serve _and_
 whether the data can be trusted.
 
 ```bash
 curl -s https://<host>/health/ready | jq
 ```
 
-| Check | `down` means | `degraded` means |
-|---|---|---|
-| `database` | Postgres unreachable. The service is out. | — |
-| `cache` | — | Redis is unreachable. **Not an outage** — the API serves uncached. Latency rises; correctness does not change. |
-| `migrations` | No migrations applied. Almost always a deploy that skipped the migration job. | — |
-| `martFreshness` | Cannot read `core.mart_refresh`. | Oldest mart is over 24h old. Data is stale but correct. |
-| `dataQuality` | — | One or more of the 23 checks is failing. **Investigate before trusting any number the API returns.** |
+| Check           | `down` means                                                                  | `degraded` means                                                                                               |
+| --------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `database`      | Postgres unreachable. The service is out.                                     | —                                                                                                              |
+| `cache`         | —                                                                             | Redis is unreachable. **Not an outage** — the API serves uncached. Latency rises; correctness does not change. |
+| `migrations`    | No migrations applied. Almost always a deploy that skipped the migration job. | —                                                                                                              |
+| `martFreshness` | Cannot read `core.mart_refresh`.                                              | Oldest mart is over 24h old. Data is stale but correct.                                                        |
+| `dataQuality`   | —                                                                             | One or more of the 23 checks is failing. **Investigate before trusting any number the API returns.**           |
 
 The endpoint returns 503 only when something is `down`. `degraded` still returns
 200, because a degraded service that is serving correct data should stay in the
@@ -44,7 +44,7 @@ psql "$DATABASE_URL" -c "
 "
 ```
 
-Every check returns the *offending rows*, so `sample_violations` usually
+Every check returns the _offending rows_, so `sample_violations` usually
 contains the answer. Re-run them on demand:
 
 ```bash
@@ -70,7 +70,7 @@ ORDER BY p.position;
 ```
 
 **A `warn` is not a failure.** `vendor_extras_components_self_consistent` warns
-on one innings where the *source's* extras components disagree with its own
+on one innings where the _source's_ extras components disagree with its own
 total. Expected, documented, and correct to leave warning.
 
 ---
@@ -175,12 +175,12 @@ migration under pressure.
 Never destructive in the same release that starts using the change. Renaming
 `x` to `y`:
 
-| Release | Action | Safe to roll back? |
-|---|---|---|
-| 1 | Add `y`, nullable. Write to both. | Yes — old code ignores `y` |
-| 2 | Backfill `y`. Switch reads to `y`. | Yes — `x` still populated |
-| 3 | Stop writing `x`. | Yes |
-| 4 | Drop `x`. | **No** — this is the point of no return |
+| Release | Action                             | Safe to roll back?                      |
+| ------- | ---------------------------------- | --------------------------------------- |
+| 1       | Add `y`, nullable. Write to both.  | Yes — old code ignores `y`              |
+| 2       | Backfill `y`. Switch reads to `y`. | Yes — `x` still populated               |
+| 3       | Stop writing `x`.                  | Yes                                     |
+| 4       | Drop `x`.                          | **No** — this is the point of no return |
 
 Each step is independently deployable and each of the first three is
 independently reversible. A single-release rename is not.
@@ -286,13 +286,13 @@ ORDER BY idx_scan ASC LIMIT 20;
 
 ## Alerts worth configuring
 
-| Alert | Condition | Why |
-|---|---|---|
-| Error rate | `http_requests_total{status=~"5.."}` > 2% for 5m | Users are seeing failures |
-| Latency | p99 `http_request_duration_seconds` > 1s for 10m | Degrading before it breaks |
-| Data quality | `data_quality_check_status{status="fail"} > 0` | **The numbers are wrong.** Highest priority — the API is still serving |
-| Mart staleness | `mart_staleness_seconds` > 86400 | The refresh job stopped |
-| Pool saturation | `db_pool_connections{state="in_use"}` / max > 0.8 | Next traffic increase queues |
+| Alert           | Condition                                         | Why                                                                    |
+| --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| Error rate      | `http_requests_total{status=~"5.."}` > 2% for 5m  | Users are seeing failures                                              |
+| Latency         | p99 `http_request_duration_seconds` > 1s for 10m  | Degrading before it breaks                                             |
+| Data quality    | `data_quality_check_status{status="fail"} > 0`    | **The numbers are wrong.** Highest priority — the API is still serving |
+| Mart staleness  | `mart_staleness_seconds` > 86400                  | The refresh job stopped                                                |
+| Pool saturation | `db_pool_connections{state="in_use"}` / max > 0.8 | Next traffic increase queues                                           |
 
 The data-quality alert is the one that does not exist in most systems and is the
 one that matters most here: everything else tells you the service is unhealthy,

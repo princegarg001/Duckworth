@@ -164,9 +164,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                       className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-raised"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm text-ink">
-                          v {f.opponent.name}
-                        </span>
+                        <span className="block truncate text-sm text-ink">v {f.opponent.name}</span>
                         <span className="text-xs text-ink-faint">{f.match.matchDate}</span>
                       </span>
                       <span className="shrink-0 text-right text-sm tabular-nums">

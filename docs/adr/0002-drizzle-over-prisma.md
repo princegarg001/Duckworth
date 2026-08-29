@@ -33,11 +33,11 @@ typed rows.
   state and re-defining it should not require inventing a migration for every
   change to a `SELECT`. `drizzle.config.ts` documents the split.
 - drizzle-kit bundles as CommonJS and cannot resolve NodeNext `.js` specifiers
-  in TypeScript sources, so migration generation reads the *compiled* schema.
+  in TypeScript sources, so migration generation reads the _compiled_ schema.
   `pnpm generate` depends on `build`.
 - **`drizzle()` mutates the shared postgres-js client**, installing identity
   serialisers for the timestamp OIDs (1082, 1083, 1114, 1184) so it can do its
-  own mapping. Any `Date` passed to a *raw* tagged-template query on that same
+  own mapping. Any `Date` passed to a _raw_ tagged-template query on that same
   client then reaches the wire protocol unconverted. The ingest passes ISO
   strings for this reason; see `isoFromEpochSeconds`. This cost half an hour to
   find and is exactly the kind of thing worth writing down.

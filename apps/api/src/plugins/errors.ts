@@ -60,12 +60,7 @@ export class ApiError extends Error {
   }
 
   static serviceUnavailable(detail: string): ApiError {
-    return new ApiError(
-      503,
-      `${ERROR_BASE}/service-unavailable`,
-      'Service Unavailable',
-      detail,
-    );
+    return new ApiError(503, `${ERROR_BASE}/service-unavailable`, 'Service Unavailable', detail);
   }
 }
 
@@ -113,7 +108,7 @@ export const errorHandler = fp(
             const path =
               issue !== undefined && Array.isArray(issue.path) && issue.path.length > 0
                 ? `${error.validationContext ?? 'input'}.${issue.path.join('.')}`
-                : (v.instancePath.replace(/^\//, '').replace(/\//g, '.') || '(root)');
+                : v.instancePath.replace(/^\//, '').replace(/\//g, '.') || '(root)';
             return { path, message: issue?.message ?? v.message ?? 'Invalid value' };
           }),
         });

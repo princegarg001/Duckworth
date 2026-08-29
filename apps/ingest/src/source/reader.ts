@@ -67,7 +67,8 @@ export const IGNORED_DIRS: ReadonlyArray<{ dir: string; reason: string }> = [
   },
   {
     dir: 'batting_stats',
-    reason: 'Pre-aggregated leaderboards, derivable from deliveries. Used as validation, not stored.',
+    reason:
+      'Pre-aggregated leaderboards, derivable from deliveries. Used as validation, not stored.',
   },
   {
     dir: 'bowling_stats',
@@ -80,7 +81,7 @@ export const IGNORED_DIRS: ReadonlyArray<{ dir: string; reason: string }> = [
   {
     dir: 'player_career_stats',
     reason:
-      'All-format career totals (Test/ODI/T20I) spanning a player\'s whole career, not IPL 2022. Only the biographical block is used, and that also appears in squads.',
+      "All-format career totals (Test/ODI/T20I) spanning a player's whole career, not IPL 2022. Only the biographical block is used, and that also appears in squads.",
   },
 ];
 

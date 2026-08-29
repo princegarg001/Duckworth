@@ -320,9 +320,7 @@ export async function buildApp(env: ApiEnv, overrides: { db?: DbHandle } = {}) {
     return reply.send(app.swagger());
   });
 
-  app.get('/', { schema: { hide: true } }, async (_request, reply) =>
-    reply.redirect('/docs', 302),
-  );
+  app.get('/', { schema: { hide: true } }, async (_request, reply) => reply.redirect('/docs', 302));
 
   await app.ready();
 

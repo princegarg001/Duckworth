@@ -45,7 +45,14 @@ describe('parseDismissalKind', () => {
 
 describe('isBowlerCredited', () => {
   it('credits the bowler for the five wicket-taking modes plus c&b', () => {
-    for (const k of ['bowled', 'caught', 'caught_and_bowled', 'lbw', 'stumped', 'hit_wicket'] as const) {
+    for (const k of [
+      'bowled',
+      'caught',
+      'caught_and_bowled',
+      'lbw',
+      'stumped',
+      'hit_wicket',
+    ] as const) {
       expect(isBowlerCredited(k)).toBe(true);
     }
   });

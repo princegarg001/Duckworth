@@ -85,13 +85,7 @@ function TooltipCard({
   );
 }
 
-export function WormChart({
-  data,
-  teams,
-}: {
-  data: WormPoint[];
-  teams: TeamLabel[];
-}) {
+export function WormChart({ data, teams }: { data: WormPoint[]; teams: TeamLabel[] }) {
   const innings = [...new Set(data.map((d) => d.inningsNo))].sort((a, b) => a - b);
   const labelFor = (n: number) => teams.find((t) => t.inningsNo === n)?.label ?? `Innings ${n}`;
 
@@ -166,7 +160,13 @@ export function WormChart({
             axisLine={{ stroke: GRID }}
             // Label in overs, which is how the score is actually read.
             tickFormatter={(b: number) => String(Math.floor(b / 6))}
-            label={{ value: 'Overs', position: 'insideBottom', offset: -2, fontSize: 11, fill: AXIS }}
+            label={{
+              value: 'Overs',
+              position: 'insideBottom',
+              offset: -2,
+              fontSize: 11,
+              fill: AXIS,
+            }}
           />
           <YAxis
             stroke={AXIS}
@@ -219,13 +219,7 @@ interface ManhattanBarData {
   wickets: number;
 }
 
-export function ManhattanChart({
-  data,
-  teams,
-}: {
-  data: ManhattanBarData[];
-  teams: TeamLabel[];
-}) {
+export function ManhattanChart({ data, teams }: { data: ManhattanBarData[]; teams: TeamLabel[] }) {
   const innings = [...new Set(data.map((d) => d.inningsNo))].sort((a, b) => a - b);
   const labelFor = (n: number) => teams.find((t) => t.inningsNo === n)?.label ?? `Innings ${n}`;
 
@@ -283,7 +277,13 @@ export function ManhattanChart({
             tick={{ fontSize: 11, fill: AXIS }}
             tickLine={false}
             axisLine={{ stroke: GRID }}
-            label={{ value: 'Over', position: 'insideBottom', offset: -2, fontSize: 11, fill: AXIS }}
+            label={{
+              value: 'Over',
+              position: 'insideBottom',
+              offset: -2,
+              fontSize: 11,
+              fill: AXIS,
+            }}
           />
           <YAxis
             stroke={AXIS}

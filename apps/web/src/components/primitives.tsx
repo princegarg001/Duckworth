@@ -139,9 +139,5 @@ export function Signed({ value, digits = 3 }: { value: number; digits?: number }
 
 /** Renders a nullable rate as an em dash rather than "null" or "NaN". */
 export function Rate({ value, digits = 2 }: { value: number | null; digits?: number }) {
-  return value === null ? (
-    <span className="text-ink-faint">—</span>
-  ) : (
-    <>{value.toFixed(digits)}</>
-  );
+  return value === null ? <span className="text-ink-faint">—</span> : <>{value.toFixed(digits)}</>;
 }

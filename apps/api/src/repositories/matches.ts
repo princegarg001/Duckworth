@@ -79,12 +79,24 @@ function toMatchSummary(r: MatchListRow) {
     startTime: new Date(r.start_time).toISOString(),
     venue: { id: r.venue_id, name: r.venue_name, city: r.venue_city, country: r.venue_country },
     teamA: side(
-      r.team_a_id, r.team_a_name, r.team_a_short, r.team_a_country, r.team_a_logo,
-      r.a_runs, r.a_wickets, r.a_balls,
+      r.team_a_id,
+      r.team_a_name,
+      r.team_a_short,
+      r.team_a_country,
+      r.team_a_logo,
+      r.a_runs,
+      r.a_wickets,
+      r.a_balls,
     ),
     teamB: side(
-      r.team_b_id, r.team_b_name, r.team_b_short, r.team_b_country, r.team_b_logo,
-      r.b_runs, r.b_wickets, r.b_balls,
+      r.team_b_id,
+      r.team_b_name,
+      r.team_b_short,
+      r.team_b_country,
+      r.team_b_logo,
+      r.b_runs,
+      r.b_wickets,
+      r.b_balls,
     ),
     tossWinnerId: r.toss_winner_id,
     tossDecision: r.toss_decision as 'bat' | 'field' | null,
@@ -216,12 +228,22 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
         legal_balls: number;
         run_rate: string | null;
         target: number | null;
-        bat_id: number; bat_name: string; bat_short: string;
-        bat_country: string | null; bat_logo: string | null;
-        bowl_id: number; bowl_name: string; bowl_short: string;
-        bowl_country: string | null; bowl_logo: string | null;
-        byes: number; legbyes: number; wides: number; noballs: number;
-        penalty: number; extras_total: number;
+        bat_id: number;
+        bat_name: string;
+        bat_short: string;
+        bat_country: string | null;
+        bat_logo: string | null;
+        bowl_id: number;
+        bowl_name: string;
+        bowl_short: string;
+        bowl_country: string | null;
+        bowl_logo: string | null;
+        byes: number;
+        legbyes: number;
+        wides: number;
+        noballs: number;
+        penalty: number;
+        extras_total: number;
       }[]
     >`
       select s.innings_id, s.innings_no, s.is_super_over, s.runs, s.wickets,
@@ -320,10 +342,20 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
         balls: number;
         run_rate: string | null;
         was_broken: boolean;
-        a_id: number; a_full: string; a_short: string; a_country: string | null;
-        a_role: string | null; a_bat: string | null; a_bowl: string | null;
-        b_id: number; b_full: string; b_short: string; b_country: string | null;
-        b_role: string | null; b_bat: string | null; b_bowl: string | null;
+        a_id: number;
+        a_full: string;
+        a_short: string;
+        a_country: string | null;
+        a_role: string | null;
+        a_bat: string | null;
+        a_bowl: string | null;
+        b_id: number;
+        b_full: string;
+        b_short: string;
+        b_country: string | null;
+        b_role: string | null;
+        b_bat: string | null;
+        b_bowl: string | null;
       }[]
     >`
       select pt.innings_id, pt.wicket_number, pt.runs, pt.balls, pt.run_rate, pt.was_broken,
@@ -356,12 +388,18 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
       id: i.innings_id,
       inningsNo: i.innings_no,
       battingTeam: {
-        id: i.bat_id, name: i.bat_name, shortName: i.bat_short,
-        country: i.bat_country, logoUrl: i.bat_logo,
+        id: i.bat_id,
+        name: i.bat_name,
+        shortName: i.bat_short,
+        country: i.bat_country,
+        logoUrl: i.bat_logo,
       },
       bowlingTeam: {
-        id: i.bowl_id, name: i.bowl_name, shortName: i.bowl_short,
-        country: i.bowl_country, logoUrl: i.bowl_logo,
+        id: i.bowl_id,
+        name: i.bowl_name,
+        shortName: i.bowl_short,
+        country: i.bowl_country,
+        logoUrl: i.bowl_logo,
       },
       isSuperOver: i.is_super_over,
       runs: int(i.runs),
@@ -370,8 +408,12 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
       runRate: num(i.run_rate),
       target: i.target,
       extras: {
-        byes: int(i.byes), legbyes: int(i.legbyes), wides: int(i.wides),
-        noballs: int(i.noballs), penalty: int(i.penalty), total: int(i.extras_total),
+        byes: int(i.byes),
+        legbyes: int(i.legbyes),
+        wides: int(i.wides),
+        noballs: int(i.noballs),
+        penalty: int(i.penalty),
+        total: int(i.extras_total),
       },
       batting: byInnings(batting, i.innings_id).map((b) => ({
         player: toPlayerSummary(b),
@@ -407,14 +449,22 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
       partnerships: byInnings(partnerships, i.innings_id).map((p) => ({
         wicketNumber: p.wicket_number,
         playerA: toPlayerSummary({
-          player_id: p.a_id, full_name: p.a_full, short_name: p.a_short,
-          country_code: p.a_country, playing_role: p.a_role,
-          batting_style: p.a_bat, bowling_style: p.a_bowl,
+          player_id: p.a_id,
+          full_name: p.a_full,
+          short_name: p.a_short,
+          country_code: p.a_country,
+          playing_role: p.a_role,
+          batting_style: p.a_bat,
+          bowling_style: p.a_bowl,
         }),
         playerB: toPlayerSummary({
-          player_id: p.b_id, full_name: p.b_full, short_name: p.b_short,
-          country_code: p.b_country, playing_role: p.b_role,
-          batting_style: p.b_bat, bowling_style: p.b_bowl,
+          player_id: p.b_id,
+          full_name: p.b_full,
+          short_name: p.b_short,
+          country_code: p.b_country,
+          playing_role: p.b_role,
+          batting_style: p.b_bat,
+          bowling_style: p.b_bowl,
         }),
         runs: int(p.runs),
         balls: int(p.balls),
@@ -429,7 +479,12 @@ export async function getMatchDetail(sql: Sql, matchId: number) {
 export async function listDeliveries(
   sql: Sql,
   matchId: number,
-  opts: { innings?: number | undefined; over?: number | undefined; cursor: CursorPayload | null; limit: number },
+  opts: {
+    innings?: number | undefined;
+    over?: number | undefined;
+    cursor: CursorPayload | null;
+    limit: number;
+  },
 ) {
   return sql<
     {
@@ -450,14 +505,34 @@ export async function listDeliveries(
       commentary: string | null;
       wicket_kind: string | null;
       wicket_how_out: string | null;
-      s_id: number; s_full: string; s_short: string; s_country: string | null;
-      s_role: string | null; s_bat: string | null; s_bowl: string | null;
-      n_id: number; n_full: string; n_short: string; n_country: string | null;
-      n_role: string | null; n_bat: string | null; n_bowl: string | null;
-      b_id: number; b_full: string; b_short: string; b_country: string | null;
-      b_role: string | null; b_bat: string | null; b_bowl: string | null;
-      o_id: number | null; o_full: string | null; o_short: string | null;
-      o_country: string | null; o_role: string | null; o_bat: string | null; o_bowl: string | null;
+      s_id: number;
+      s_full: string;
+      s_short: string;
+      s_country: string | null;
+      s_role: string | null;
+      s_bat: string | null;
+      s_bowl: string | null;
+      n_id: number;
+      n_full: string;
+      n_short: string;
+      n_country: string | null;
+      n_role: string | null;
+      n_bat: string | null;
+      n_bowl: string | null;
+      b_id: number;
+      b_full: string;
+      b_short: string;
+      b_country: string | null;
+      b_role: string | null;
+      b_bat: string | null;
+      b_bowl: string | null;
+      o_id: number | null;
+      o_full: string | null;
+      o_short: string | null;
+      o_country: string | null;
+      o_role: string | null;
+      o_bat: string | null;
+      o_bowl: string | null;
     }[]
   >`
     select d.id, d.innings_id, i.innings_no, d.delivery_seq, d.over_no, d.ball_in_over,
@@ -499,9 +574,7 @@ export async function listDeliveries(
 
 /** Cumulative score by ball — the worm chart. */
 export async function getWorm(sql: Sql, matchId: number) {
-  return sql<
-    { innings_no: number; ball_number: string; runs: string; wickets: string }[]
-  >`
+  return sql<{ innings_no: number; ball_number: string; runs: string; wickets: string }[]>`
     select i.innings_no,
            count(*) filter (where d.is_legal_ball)
              over (partition by i.innings_no order by d.delivery_seq)      as ball_number,
@@ -519,9 +592,7 @@ export async function getWorm(sql: Sql, matchId: number) {
 
 /** Runs and wickets per over — the manhattan chart. */
 export async function getManhattan(sql: Sql, matchId: number) {
-  return sql<
-    { innings_no: number; over_no: number; runs: string; wickets: string }[]
-  >`
+  return sql<{ innings_no: number; over_no: number; runs: string; wickets: string }[]>`
     select i.innings_no, d.over_no,
            sum(d.total_runs)                                as runs,
            count(*) filter (where ds.id is not null)        as wickets

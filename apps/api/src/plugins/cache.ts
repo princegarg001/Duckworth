@@ -94,7 +94,9 @@ export function createCache(opts: {
       // Hash long keys so a query string with many filters cannot produce an
       // unbounded key, while short ones stay readable in redis-cli.
       const suffix =
-        joined.length <= 120 ? joined : createHash('sha256').update(joined).digest('hex').slice(0, 32);
+        joined.length <= 120
+          ? joined
+          : createHash('sha256').update(joined).digest('hex').slice(0, 32);
       return `v${v}:${suffix}`;
     },
 
@@ -147,10 +149,7 @@ export function applyCacheHeaders(
   const etag = `"${createHash('sha256').update(JSON.stringify(body)).digest('base64url').slice(0, 27)}"`;
   const swr = opts.staleWhileRevalidate ?? opts.maxAge * 5;
   reply.header('etag', etag);
-  reply.header(
-    'cache-control',
-    `public, max-age=${opts.maxAge}, stale-while-revalidate=${swr}`,
-  );
+  reply.header('cache-control', `public, max-age=${opts.maxAge}, stale-while-revalidate=${swr}`);
   return etag;
 }
 

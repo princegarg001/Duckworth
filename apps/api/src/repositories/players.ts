@@ -52,7 +52,13 @@ export async function findPlayer(sql: Sql, id: number) {
   if (r === undefined) return null;
 
   const teams = await sql<
-    { id: number; name: string; short_name: string; country: string | null; logo_url: string | null }[]
+    {
+      id: number;
+      name: string;
+      short_name: string;
+      country: string | null;
+      logo_url: string | null;
+    }[]
   >`
     select distinct t.id, t.name, t.short_name, t.country, t.logo_url
     from core.season_squad ss
@@ -79,10 +85,19 @@ export async function findPlayer(sql: Sql, id: number) {
 export async function getBattingCareer(sql: Sql, playerId: number, seasonId: number | null) {
   const rows = await sql<
     (PlayerRow & {
-      matches: number; innings: number; runs: number; balls_faced: number;
-      highest_score: number; average: string | null; strike_rate: string | null;
-      fifties: number; hundreds: number; fours: number; sixes: number;
-      ducks: number; not_outs: number;
+      matches: number;
+      innings: number;
+      runs: number;
+      balls_faced: number;
+      highest_score: number;
+      average: string | null;
+      strike_rate: string | null;
+      fifties: number;
+      hundreds: number;
+      fours: number;
+      sixes: number;
+      ducks: number;
+      not_outs: number;
     })[]
   >`
     select b.matches, b.innings, b.runs, b.balls_faced, b.highest_score,
@@ -119,10 +134,18 @@ export async function getBattingCareer(sql: Sql, playerId: number, seasonId: num
 export async function getBowlingCareer(sql: Sql, playerId: number, seasonId: number | null) {
   const rows = await sql<
     (PlayerRow & {
-      matches: number; innings: number; balls_bowled: number; runs_conceded: number;
-      wickets: number; maidens: number; best_wickets: number;
-      economy: string | null; average: string | null; strike_rate: string | null;
-      four_wicket_hauls: number; five_wicket_hauls: number;
+      matches: number;
+      innings: number;
+      balls_bowled: number;
+      runs_conceded: number;
+      wickets: number;
+      maidens: number;
+      best_wickets: number;
+      economy: string | null;
+      average: string | null;
+      strike_rate: string | null;
+      four_wicket_hauls: number;
+      five_wicket_hauls: number;
     })[]
   >`
     select w.matches, w.innings, w.balls_bowled, w.runs_conceded, w.wickets,
@@ -159,9 +182,17 @@ export async function getBowlingCareer(sql: Sql, playerId: number, seasonId: num
 export async function getPhaseSplits(sql: Sql, playerId: number, seasonId: number | null) {
   const rows = await sql<
     {
-      phase: string; discipline: string; runs: number; balls: number;
-      fours: number; sixes: number; dots: number; wickets: number;
-      strike_rate: string | null; economy: string | null; dot_percentage: string | null;
+      phase: string;
+      discipline: string;
+      runs: number;
+      balls: number;
+      fours: number;
+      sixes: number;
+      dots: number;
+      wickets: number;
+      strike_rate: string | null;
+      economy: string | null;
+      dot_percentage: string | null;
     }[]
   >`
     select phase::text, discipline, runs, balls, fours, sixes, dots, wickets,
@@ -211,7 +242,12 @@ const METRICS: Readonly<Record<LeaderMetric, MetricSpec>> = {
   runs: { source: 'batting', column: 'runs', direction: 'desc', support: 'balls_faced' },
   fours: { source: 'batting', column: 'fours', direction: 'desc', support: 'balls_faced' },
   sixes: { source: 'batting', column: 'sixes', direction: 'desc', support: 'balls_faced' },
-  strike_rate: { source: 'batting', column: 'strike_rate', direction: 'desc', support: 'balls_faced' },
+  strike_rate: {
+    source: 'batting',
+    column: 'strike_rate',
+    direction: 'desc',
+    support: 'balls_faced',
+  },
   average: { source: 'batting', column: 'average', direction: 'desc', support: 'balls_faced' },
   wickets: { source: 'bowling', column: 'wickets', direction: 'desc', support: 'balls_bowled' },
   economy: { source: 'bowling', column: 'economy', direction: 'asc', support: 'balls_bowled' },
@@ -244,9 +280,10 @@ export async function getLeaders(
     limit $3
   `;
 
-  const rows = await sql.unsafe<
-    (PlayerRow & { value: string | number; support: number })[]
-  >(query, [seasonId, floor, limit]);
+  const rows = await sql.unsafe<(PlayerRow & { value: string | number; support: number })[]>(
+    query,
+    [seasonId, floor, limit],
+  );
 
   return rows.map((r, i) => ({
     rank: i + 1,
@@ -260,11 +297,19 @@ export async function getLeaders(
 export async function getForm(sql: Sql, playerId: number, last: number) {
   return sql<
     {
-      match_id: number; short_title: string; match_date: string;
-      opp_id: number; opp_name: string; opp_short: string;
-      opp_country: string | null; opp_logo: string | null;
-      runs: number | null; balls_faced: number | null;
-      wickets: number | null; runs_conceded: number | null; balls_bowled: number | null;
+      match_id: number;
+      short_title: string;
+      match_date: string;
+      opp_id: number;
+      opp_name: string;
+      opp_short: string;
+      opp_country: string | null;
+      opp_logo: string | null;
+      runs: number | null;
+      balls_faced: number | null;
+      wickets: number | null;
+      runs_conceded: number | null;
+      balls_bowled: number | null;
     }[]
   >`
     select m.id as match_id, m.short_title, m.match_date,

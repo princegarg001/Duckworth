@@ -177,7 +177,9 @@ async function cmdLoad(handle: DbHandle, args: Args, sourceDir: string): Promise
       for (const d of stats.resultDisagreements) log(`      ${d}`);
     }
     log('');
-    log(`✓ loaded in ${ms(durationMs)} (${Math.round(stats.deliveries / (durationMs / 1000))} deliveries/s)`);
+    log(
+      `✓ loaded in ${ms(durationMs)} (${Math.round(stats.deliveries / (durationMs / 1000))} deliveries/s)`,
+    );
     return 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

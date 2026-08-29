@@ -34,7 +34,7 @@ the offending import.
 ## Consequences
 
 - The contract chain (Zod → OpenAPI → generated client types) is what makes a
-  breaking API change fail the *frontend's* typecheck in CI.
+  breaking API change fail the _frontend's_ typecheck in CI.
 - Fastify's encapsulation means a type provider does not inherit into a
   registered plugin; each route module re-applies it. Noted where it happens.
 - Less prescriptive than Nest, so conventions had to be chosen deliberately —

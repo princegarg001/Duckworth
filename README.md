@@ -31,11 +31,11 @@ cp .env.example .env
 make up
 ```
 
-| What | Where |
-|---|---|
-| Web application | http://localhost:3001 |
-| API | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/docs |
+| What                            | Where                              |
+| ------------------------------- | ---------------------------------- |
+| Web application                 | http://localhost:3001              |
+| API                             | http://localhost:3000              |
+| Swagger UI                      | http://localhost:3000/docs         |
 | Readiness (returns real detail) | http://localhost:3000/health/ready |
 
 `make up` downloads the dataset, starts Postgres and Redis, runs the migrations,
@@ -55,6 +55,7 @@ make db          # postgres + redis only
 make ingest      # migrate, load, refresh, verify
 pnpm dev         # api on :3000, web on :3001
 ```
+
 </details>
 
 ---
@@ -125,16 +126,16 @@ So the first thing built was a profiler, not a schema. Designing from the
 actual bytes surfaced eight defects that a schema drawn from the brief would
 have silently absorbed:
 
-| # | What the source does | Why it matters | How it is handled |
-|---|---|---|---|
-| 1 | `result_type` **contradicts its own `status_note` in 49 of 74 matches** | Two thirds of the season would be labelled "won by wickets" when it was won by runs | Field ignored entirely. The margin kind is derived from *which innings the winner batted in* — a side that bats first and wins, wins by runs. Agrees with the prose on 74/74. [`result.ts`](packages/domain/src/result.ts) |
-| 2 | `(over, ball)` is **not unique** — 729 collisions | Any sort or pagination by it silently drops or repeats deliveries | Monotonic `delivery_seq`, assigned at transform time, is the ordering key everywhere |
-| 3 | `over` is **0-indexed on ball events, 1-indexed on over summaries** | Off-by-one in every phase split | `overend` entries are never read for their over; they are not deliveries at all |
-| 4 | `commentaries` mixes **three event kinds** — 17,001 `ball`, 911 `wicket`, 2,837 `overend` | Counting all three inflates the ball count by 16% | Only `ball` and `wicket` are deliveries; a `wicket` *is* one |
-| 5 | Of 912 dismissals, **exactly one has no delivery** (a retired hurt) | Modelling dismissals as a column on `delivery` forces that row to be invented, dropped, or misattached | `dismissal` is its own table with a **nullable** `delivery_id`. R Ashwin's retired-out *does* sit on a ball; the two retirements are not the same case |
-| 6 | Three deliveries have run components that **don't sum to their total** ("5 no ball") | Extras reconciliation fails by 9 runs | Residual recovered as byes by elimination — not off the bat (batting reconciles), not the no-ball penalty (bowling reconciles) — and reported on every run |
-| 7 | Two deliveries list the **striker twice** instead of striker + non-striker | Non-striker unresolvable | Recovered from the previous pair at the crease; the pair only changes on a wicket or between overs |
-| 8 | Umpires arrive as **one string** whose third entry contains a comma inside its parenthetical: `"… , Nitin Menon(India, TV)"` | `split(',')` invents a fourth official named `TV)` — 74 times | Split on top-level commas only, then parse role and country. Whitespace-normalised so `Menon(India)` and `Menon (India)` are one person |
+| #   | What the source does                                                                                                         | Why it matters                                                                                         | How it is handled                                                                                                                                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `result_type` **contradicts its own `status_note` in 49 of 74 matches**                                                      | Two thirds of the season would be labelled "won by wickets" when it was won by runs                    | Field ignored entirely. The margin kind is derived from _which innings the winner batted in_ — a side that bats first and wins, wins by runs. Agrees with the prose on 74/74. [`result.ts`](packages/domain/src/result.ts) |
+| 2   | `(over, ball)` is **not unique** — 729 collisions                                                                            | Any sort or pagination by it silently drops or repeats deliveries                                      | Monotonic `delivery_seq`, assigned at transform time, is the ordering key everywhere                                                                                                                                       |
+| 3   | `over` is **0-indexed on ball events, 1-indexed on over summaries**                                                          | Off-by-one in every phase split                                                                        | `overend` entries are never read for their over; they are not deliveries at all                                                                                                                                            |
+| 4   | `commentaries` mixes **three event kinds** — 17,001 `ball`, 911 `wicket`, 2,837 `overend`                                    | Counting all three inflates the ball count by 16%                                                      | Only `ball` and `wicket` are deliveries; a `wicket` _is_ one                                                                                                                                                               |
+| 5   | Of 912 dismissals, **exactly one has no delivery** (a retired hurt)                                                          | Modelling dismissals as a column on `delivery` forces that row to be invented, dropped, or misattached | `dismissal` is its own table with a **nullable** `delivery_id`. R Ashwin's retired-out _does_ sit on a ball; the two retirements are not the same case                                                                     |
+| 6   | Three deliveries have run components that **don't sum to their total** ("5 no ball")                                         | Extras reconciliation fails by 9 runs                                                                  | Residual recovered as byes by elimination — not off the bat (batting reconciles), not the no-ball penalty (bowling reconciles) — and reported on every run                                                                 |
+| 7   | Two deliveries list the **striker twice** instead of striker + non-striker                                                   | Non-striker unresolvable                                                                               | Recovered from the previous pair at the crease; the pair only changes on a wicket or between overs                                                                                                                         |
+| 8   | Umpires arrive as **one string** whose third entry contains a comma inside its parenthetical: `"… , Nitin Menon(India, TV)"` | `split(',')` invents a fourth official named `TV)` — 74 times                                          | Split on top-level commas only, then parse role and country. Whitespace-normalised so `Menon(India)` and `Menon (India)` are one person                                                                                    |
 
 Two more the vendor gets wrong that we report rather than absorb: one innings
 whose extras components sum to 12 against its own stated total of 11 (the
@@ -181,7 +182,7 @@ Four schemas, four different guarantees:
 Things worth opening the schema for:
 
 **Generated columns.** `extra_runs`, `is_wide`, `is_noball`, `is_legal_ball` and
-`counts_as_ball_faced` are computed *by Postgres*, so no code path — ingest,
+`counts_as_ball_faced` are computed _by Postgres_, so no code path — ingest,
 backfill, or a future writer — can produce a row that disagrees with itself.
 
 **Constraints that make bad rows unstorable.** A winner must be a participant. A
@@ -208,7 +209,7 @@ assert "returns 200" as the interesting property.
 
 ### The data contract — 23 checks, run after every ingest
 
-Every check is a SQL query returning *offending rows*, so a failure arrives with
+Every check is a SQL query returning _offending rows_, so a failure arrives with
 the rows that caused it. They gate the pipeline: a failure exits non-zero, and in
 compose and Helm the API never starts.
 
@@ -230,7 +231,7 @@ compose and Helm the API never starts.
 ✓ 23 data-quality checks passed, 1 warning
 ```
 
-The one warning is deliberate: it flags a defect in the *source*, not in our
+The one warning is deliberate: it flags a defect in the _source_, not in our
 derivation, and is `severity: warn` so it stays visible on every run without
 blocking a deploy. It starts failing if it ever changes.
 
@@ -239,25 +240,25 @@ blocking a deploy. It starts failing if it ever changes.
 NRR is where cricket data platforms quietly go wrong. Three rules, all verified:
 
 1. **A side bowled out is charged its full 20-over quota**, not the overs it
-   actually faced — otherwise taking the tenth wicket would *hurt* your NRR.
+   actually faced — otherwise taking the tenth wicket would _hurt_ your NRR.
 2. **League stage only.** Including the four playoff matches moves all four
    qualifiers and reconciles with nothing.
 3. **Retired hurt is not a wicket lost**, so it cannot trigger rule 1 spuriously.
 
 Computed from deliveries, compared to the published standings:
 
-| # | Team | P | W | L | Pts | NRR (ours = official) | Runs for | Overs for |
-|---|---|---|---|---|---|---|---|---|
-| 1 | GT | 14 | 10 | 4 | 20 | **+0.316** | 2339 | 278.1 |
-| 2 | RR | 14 | 9 | 5 | 18 | **+0.298** | 2464 | 279.2 |
-| 3 | LSG | 14 | 9 | 5 | 18 | **+0.251** | 2355 | 279.1 |
-| 4 | RCB | 14 | 8 | 6 | 16 | **−0.253** | 2268 | 275.4 |
-| 5 | DC | 14 | 7 | 7 | 14 | **+0.204** | 2341 | 266.0 |
-| 6 | PBKS | 14 | 7 | 7 | 14 | **+0.126** | 2343 | 270.1 |
-| 7 | KKR | 14 | 6 | 8 | 12 | **+0.146** | 2223 | 268.1 |
-| 8 | SRH | 14 | 6 | 8 | 12 | **−0.379** | 2197 | 261.3 |
-| 9 | CSK | 14 | 4 | 10 | 8 | **−0.203** | 2288 | 280.0 |
-| 10 | MI | 14 | 4 | 10 | 8 | **−0.506** | 2217 | 273.2 |
+| #   | Team | P   | W   | L   | Pts | NRR (ours = official) | Runs for | Overs for |
+| --- | ---- | --- | --- | --- | --- | --------------------- | -------- | --------- |
+| 1   | GT   | 14  | 10  | 4   | 20  | **+0.316**            | 2339     | 278.1     |
+| 2   | RR   | 14  | 9   | 5   | 18  | **+0.298**            | 2464     | 279.2     |
+| 3   | LSG  | 14  | 9   | 5   | 18  | **+0.251**            | 2355     | 279.1     |
+| 4   | RCB  | 14  | 8   | 6   | 16  | **−0.253**            | 2268     | 275.4     |
+| 5   | DC   | 14  | 7   | 7   | 14  | **+0.204**            | 2341     | 266.0     |
+| 6   | PBKS | 14  | 7   | 7   | 14  | **+0.126**            | 2343     | 270.1     |
+| 7   | KKR  | 14  | 6   | 8   | 12  | **+0.146**            | 2223     | 268.1     |
+| 8   | SRH  | 14  | 6   | 8   | 12  | **−0.379**            | 2197     | 261.3     |
+| 9   | CSK  | 14  | 4   | 10  | 8   | **−0.203**            | 2288     | 280.0     |
+| 10  | MI   | 14  | 4   | 10  | 8   | **−0.506**            | 2217     | 273.2     |
 
 Ten of ten, to three decimals — see
 [`nrr.test.ts`](packages/domain/src/__tests__/nrr.test.ts) and the
@@ -269,11 +270,11 @@ Kock's unbeaten 140.
 
 ### Tests
 
-| Layer | Tool | What it proves |
-|---|---|---|
-| **Unit** — 113 tests, 99.5% statements | Vitest | Pure cricket logic: over arithmetic is base-6 (`17.4 + 0.2 = 18.0`), a strike rate off zero balls is `null` not `Infinity`, run-outs never credit a bowler, the umpire parser never invents `TV)` |
-| **Integration** — 23 tests | Vitest + **Testcontainers** | Real Postgres 17, real migrations, real ingest run as a subprocess, driven through `app.inject()`. Asserts internally consistent scorecards, cursor pagination that neither repeats nor skips across all 74 matches, ETag/304, and the points table row by row |
-| **E2E** | Playwright + axe | Four user flows plus an accessibility pass |
+| Layer                                  | Tool                        | What it proves                                                                                                                                                                                                                                                 |
+| -------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unit** — 113 tests, 99.5% statements | Vitest                      | Pure cricket logic: over arithmetic is base-6 (`17.4 + 0.2 = 18.0`), a strike rate off zero balls is `null` not `Infinity`, run-outs never credit a bowler, the umpire parser never invents `TV)`                                                              |
+| **Integration** — 23 tests             | Vitest + **Testcontainers** | Real Postgres 17, real migrations, real ingest run as a subprocess, driven through `app.inject()`. Asserts internally consistent scorecards, cursor pagination that neither repeats nor skips across all 74 matches, ETag/304, and the points table row by row |
+| **E2E**                                | Playwright + axe            | Four user flows plus an accessibility pass                                                                                                                                                                                                                     |
 
 Nothing is mocked in the integration layer, deliberately. A mocked database
 cannot tell you that a generated column disagrees with a check constraint, that
@@ -313,7 +314,7 @@ Zod schemas ──> OpenAPI 3.1 ──> generated TS types ──> frontend clie
 ```
 
 CI regenerates the document and **fails if it differs from the committed copy**,
-then regenerates the frontend's types and fails if *those* differ. Remove a
+then regenerates the frontend's types and fails if _those_ differ. Remove a
 field the UI reads and the **frontend's typecheck** breaks — in the pull request
 that removed it, not in production.
 
@@ -329,11 +330,16 @@ that removed it, not in production.
   "detail": "Validation failed for the request querystring.",
   "instance": "/v1/matches?limit=500",
   "traceId": "ffe8cbf5-3cde-4934-8939-4714d34fa540",
-  "errors": [{ "path": "querystring.limit", "message": "Number must be less than or equal to 100" }]
+  "errors": [
+    {
+      "path": "querystring.limit",
+      "message": "Number must be less than or equal to 100"
+    }
+  ]
 }
 ```
 
-A response that fails its *own* schema is reported as 500, not as a client
+A response that fails its _own_ schema is reported as 500, not as a client
 error — that is our bug, not the caller's.
 
 **Keyset pagination** by default. `OFFSET 40000` makes Postgres walk and discard
@@ -359,15 +365,15 @@ of any season belongs to a number eleven who faced two balls.
 Eight screens, server-rendered, with the charts streaming in behind `<Suspense>`
 so the scorecard never waits on them.
 
-| Route | Content |
-|---|---|
-| `/` | Points table, season leaders, headline stats |
-| `/matches` | Filterable, cursor-paginated fixture list |
-| `/matches/[id]` | Full scorecard, worm chart, manhattan chart, partnerships, officials |
-| `/matches/[id]/deliveries` | Virtualised ball-by-ball |
-| `/teams` · `/teams/[id]` | Standings, head-to-head, season results |
-| `/players` · `/players/[id]` | Search, career record, phase splits, recent form |
-| `/venues` | Scoring and toss profile per ground |
+| Route                        | Content                                                              |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `/`                          | Points table, season leaders, headline stats                         |
+| `/matches`                   | Filterable, cursor-paginated fixture list                            |
+| `/matches/[id]`              | Full scorecard, worm chart, manhattan chart, partnerships, officials |
+| `/matches/[id]/deliveries`   | Virtualised ball-by-ball                                             |
+| `/teams` · `/teams/[id]`     | Standings, head-to-head, season results                              |
+| `/players` · `/players/[id]` | Search, career record, phase splits, recent form                     |
+| `/venues`                    | Scoring and toss profile per ground                                  |
 
 **The URL is the state.** Every filter and cursor lives in the query string, so
 a filtered view is shareable and the back button steps through filter changes.
@@ -381,7 +387,7 @@ them on demand.
 (cumulative score over time → line; runs per over → bars; three ordered phases →
 bars, not a radar). The three-slot categorical palette clears colour-vision
 separation gates in both light and dark mode. **No chart has a second y-axis.**
-Every chart carries a *Table* toggle rendering the same numbers as a real
+Every chart carries a _Table_ toggle rendering the same numbers as a real
 `<table>` — the accessibility path, and the relief mechanism for the one series
 colour that sits under 3:1 on the light surface.
 
@@ -403,24 +409,32 @@ cold start at the end of it.
   "commit": "c1e166a",
   "uptimeSeconds": 8241,
   "checks": {
-    "database":      { "status": "ok", "latencyMs": 3 },
-    "cache":         { "status": "ok", "latencyMs": 1 },
-    "migrations":    { "status": "ok", "applied": 1 },
-    "martFreshness": { "status": "ok", "lastRefresh": "2026-08-29T09:12:04Z", "ageSeconds": 312 },
-    "dataQuality":   { "status": "ok", "failing": 0, "lastRun": "2026-08-29T09:12:03Z" }
+    "database": { "status": "ok", "latencyMs": 3 },
+    "cache": { "status": "ok", "latencyMs": 1 },
+    "migrations": { "status": "ok", "applied": 1 },
+    "martFreshness": {
+      "status": "ok",
+      "lastRefresh": "2026-08-29T09:12:04Z",
+      "ageSeconds": 312
+    },
+    "dataQuality": {
+      "status": "ok",
+      "failing": 0,
+      "lastRun": "2026-08-29T09:12:03Z"
+    }
   }
 }
 ```
 
 That last check is the unusual one: readiness reports whether the data is
-*trustworthy*, not merely whether the database answers.
+_trustworthy_, not merely whether the database answers.
 
 **Graceful shutdown.** `SIGTERM` → stop accepting → drain in flight → close the
 pool → exit 0. Without it, every rolling deploy returns 502s to whoever was
 mid-request. `terminationGracePeriodSeconds` is set above the drain timeout so
 the kubelet cannot `SIGKILL` mid-drain.
 
-**Metrics** are labelled by route *template*, never resolved path — one time
+**Metrics** are labelled by route _template_, never resolved path — one time
 series per match id would make the metrics backend the most expensive component
 in the system.
 
@@ -460,7 +474,7 @@ smoke-tested directly — including that the points table still matches — cana
 at 10%, and only then promotes. Failure rolls traffic back.
 
 Migrations are **expand-then-contract**: add a column, backfill, switch reads,
-drop in a *later* release. A destructive change in the same deploy that starts
+drop in a _later_ release. A destructive change in the same deploy that starts
 using it cannot be rolled back.
 
 ---
@@ -470,12 +484,12 @@ using it cannot be rolled back.
 Being precise about this, because it is the easiest place in a submission to
 imply more than is true.
 
-| Component | Status |
-|---|---|
-| `docker compose up` | **Works**, verified in CI on every push against a clean clone |
-| Helm chart | **Validated by applying it** — CI spins a kind cluster, installs, waits for rollout, curls the API |
-| Cloud Run deploy | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`) |
-| Terraform | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** |
+| Component           | Status                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `docker compose up` | **Works**, verified in CI on every push against a clean clone                                               |
+| Helm chart          | **Validated by applying it** — CI spins a kind cluster, installs, waits for rollout, curls the API          |
+| Cloud Run deploy    | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`)                                                |
+| Terraform           | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** |
 
 <!-- LIVE_URLS -->
 
@@ -491,7 +505,7 @@ az login
 ```
 
 Provisions a resource group, an Azure Container Registry, a PostgreSQL
-Flexible Server, and a Container Apps environment; builds the images *in* ACR
+Flexible Server, and a Container Apps environment; builds the images _in_ ACR
 (so no local Docker and no chance of pushing an arm64 image that will not
 run); runs the ingest as a **Container Apps Job** — the direct analogue of the
 one-shot job this pipeline was designed around — and only deploys the API once
@@ -562,7 +576,7 @@ directly, canaries at 10%, and only then promotes.
 - Containers: distroless, non-root, read-only root filesystem, `cap_drop: ALL`,
   Trivy gate on HIGH/CRITICAL, SBOM, cosign keyless signatures.
 - Secrets: Secret Manager via ExternalSecrets. Nothing sensitive in any values
-  file. gitleaks in CI. Terraform has no `db_password` variable *at all* — the
+  file. gitleaks in CI. Terraform has no `db_password` variable _at all_ — the
   credential is generated into Secret Manager and referenced by name.
 - Default-deny NetworkPolicy with an explicit egress allowlist.
 
@@ -575,14 +589,14 @@ Threat model and what would change for a multi-tenant deployment:
 
 Measured on the development machine (Postgres 17 in Docker, warm cache):
 
-| Operation | Result |
-|---|---|
-| Full ingest — 300 files → 17,912 deliveries → 10 matviews → 23 checks | **~15 s** end to end |
-| Delivery load throughput | ~1,300 rows/s (transactional, per match) |
-| Migrations, empty → full schema | 322 ms |
-| Mart refresh, all ten, `CONCURRENTLY` | 320 ms total |
-| `/v1/seasons/2022/points-table` | ~3 ms |
-| `/v1/matches/{id}` full scorecard | ~25 ms, fixed query count |
+| Operation                                                             | Result                                   |
+| --------------------------------------------------------------------- | ---------------------------------------- |
+| Full ingest — 300 files → 17,912 deliveries → 10 matviews → 23 checks | **~15 s** end to end                     |
+| Delivery load throughput                                              | ~1,300 rows/s (transactional, per match) |
+| Migrations, empty → full schema                                       | 322 ms                                   |
+| Mart refresh, all ten, `CONCURRENTLY`                                 | 320 ms total                             |
+| `/v1/seasons/2022/points-table`                                       | ~3 ms                                    |
+| `/v1/matches/{id}` full scorecard                                     | ~25 ms, fixed query count                |
 
 The scorecard number is the interesting one: a naive implementation issues
 1 + 2 + 2×4 = eleven round trips per match and grows with innings. This one
