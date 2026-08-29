@@ -66,6 +66,15 @@ ENV NODE_ENV=production \
 RUN apt-get update && apt-get install -y --only-upgrade libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
+# The base image bundles npm itself (and its own vendored dependency tree —
+# tar, sigstore, pacote, and so on) so the image can `npm install`. This image
+# never does: dependencies are already baked in at build time by pnpm, and the
+# only thing CMD ever runs is the standalone server. The bundled npm's
+# transitive deps are the actual source of every HIGH CVE Trivy has flagged
+# here, so removing it removes the vulnerable code rather than papering over
+# it package by package.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 # node:slim ships a `node` user (uid 1000); use it rather than root.
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
