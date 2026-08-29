@@ -1,0 +1,142 @@
+# Local development and the reviewer's first impression.
+#
+#   git clone && cp .env.example .env && make up
+#
+# must produce a working app with real data loaded. The dependency conditions
+# below are what make that true on the first try rather than the third:
+#
+#   postgres  starts, and is not "ready" until pg_isready passes
+#   migrate   waits for postgres to be HEALTHY, then runs to completion
+#   api       waits for migrate to have COMPLETED SUCCESSFULLY
+#   web       waits for api to be HEALTHY
+#
+# Without `service_completed_successfully` on the migration gate, the API races
+# the schema and crash-loops on a cold start. That race is the single most
+# common reason a compose file works for its author and nobody else.
+
+name: ipl-platform
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ipl
+      POSTGRES_PASSWORD: ipl
+      POSTGRES_DB: ipl
+      # Faster startup for a throwaway dev database; never for production.
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ipl -d ipl']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: migrate, load, refresh marts, verify. Exits non-zero if any
+  # data-quality check fails, which stops the API from ever starting against
+  # data that does not reconcile.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/ingest/Dockerfile
+    environment:
+      DATABASE_URL: postgres://ipl:ipl@postgres:5432/ipl
+      SOURCE_DIR: /data/raw
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      # Read-only: the ingest must never be able to modify its own source.
+      - ./data/raw:/data/raw:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://ipl:ipl@postgres:5432/ipl
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:3001
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SERVICE_VERSION: ${SERVICE_VERSION:-1.0.0}
+      GIT_SHA: ${GIT_SHA:-local}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-token-change-me-0123456789abcdef}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # Distroless has no shell or curl, so the probe is a Node one-liner
+      # against the readiness endpoint.
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Inlined at build time; the browser talks to the published port, not
+        # to the compose service name.
+        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-3000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - '${WEB_PORT:-3001}:3001'
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Opt-in: `docker compose --profile observability up`. Off by default so a
+  # first-time `make up` does not pull a 200MB image nobody asked for.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    profiles: ['observability']
+    command: ['--config=/etc/otel/config.yaml']
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - '4318:4318'
+
+volumes:
+  pgdata:

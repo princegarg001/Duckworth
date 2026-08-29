@@ -28,7 +28,9 @@ export type NodeEnv = z.infer<typeof NodeEnv>;
 
 const BaseEnv = z.object({
   NODE_ENV: NodeEnv.default('development'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+    .default('info'),
   SERVICE_NAME: z.string().default('ipl-api'),
   SERVICE_VERSION: z.string().default('0.0.0-dev'),
   GIT_SHA: z.string().default('unknown'),
