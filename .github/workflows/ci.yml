@@ -109,6 +109,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run build
 
+      # The harness runs the real ingest CLI against the real dataset, and
+      # data/raw is gitignored — 33MB of source JSON has no business in the
+      # repository. `make data` is the same fetch the compose-smoke job below
+      # uses, so both paths exercise identical bytes.
+      - run: make data
+
       # Testcontainers starts its own Postgres, so there is no service block
       # here: the tests own their database lifecycle and run identically on a
       # laptop and on a runner.
@@ -184,7 +190,7 @@ jobs:
           sbom: true
 
       - name: Scan for vulnerabilities
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
           format: sarif
@@ -253,8 +259,12 @@ jobs:
           echo "leader: $gt"
           [ "$gt" = "GT 20 0.316" ] || { echo "::error::points table wrong: $gt"; exit 1; }
 
-          curl -fsS http://localhost:3000/openapi.json  >/dev/null || curl -fsS http://localhost:3000/docs/json >/dev/null
-          curl -fsS http://localhost:3001/              >/dev/null
+          # --retry tolerates a brief connection reset right after the readiness
+          # probe passes — the points-table query above is heavier than these,
+          # and the runner's Docker network occasionally needs a moment.
+          curl_retry() { curl -fsS --retry 5 --retry-delay 2 --retry-all-errors "$1" >/dev/null; }
+          curl_retry http://localhost:3000/openapi.json || curl_retry http://localhost:3000/docs/json
+          curl_retry http://localhost:3001/
           echo "web, api and docs all responding"
 
       - name: Dump logs on failure
