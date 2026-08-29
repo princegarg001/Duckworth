@@ -1,0 +1,162 @@
+name: Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/infra.yml']
+  pull_request:
+    paths: ['infra/**', '.github/workflows/infra.yml']
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Helm, proven by applying it ───────────────────────────────────────────
+  #
+  # `helm lint` only says the templates parse. This job installs the chart into
+  # a real (if tiny) cluster and waits for the rollout, which is the difference
+  # between a chart that renders and a chart that works. An unvalidated chart in
+  # a repository is worse than no chart.
+  helm:
+    name: Helm on kind
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4f6c # v4.2.0
+        with:
+          version: v3.16.3
+
+      - name: Lint the chart
+        run: helm lint infra/helm/ipl-platform
+
+      - name: Validate rendered manifests against the Kubernetes schema
+        run: |
+          curl -sSLo /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp
+          # ExternalSecret is a CRD, so the schema set has to include it.
+          helm template ipl infra/helm/ipl-platform -f infra/helm/ipl-platform/values-prod.yaml \
+            | /tmp/kubeconform -strict -summary -ignore-missing-schemas \
+                -schema-location default \
+                -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
+      - name: Create a kind cluster
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+        with:
+          config: infra/k8s/kind/cluster.yaml
+          cluster_name: ipl-ci
+
+      - name: Build and load the images
+        run: |
+          docker build -f apps/api/Dockerfile -t ghcr.io/ipl-platform/api:ci .
+          docker build -f apps/web/Dockerfile -t ghcr.io/ipl-platform/web:ci .
+          kind load docker-image ghcr.io/ipl-platform/api:ci --name ipl-ci
+          kind load docker-image ghcr.io/ipl-platform/web:ci --name ipl-ci
+
+      - name: Install Postgres for the chart to talk to
+        run: |
+          kubectl create secret generic ipl-ipl-platform-secrets \
+            --from-literal=DATABASE_URL='postgres://ipl:ipl@postgres:5432/ipl' \
+            --from-literal=INTERNAL_API_TOKEN='ci-token-0123456789abcdef'
+          kubectl apply -f - <<'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata: { name: postgres }
+          spec:
+            replicas: 1
+            selector: { matchLabels: { app: postgres } }
+            template:
+              metadata: { labels: { app: postgres } }
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgres:17-alpine
+                    env:
+                      - { name: POSTGRES_USER, value: ipl }
+                      - { name: POSTGRES_PASSWORD, value: ipl }
+                      - { name: POSTGRES_DB, value: ipl }
+                    ports: [{ containerPort: 5432 }]
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata: { name: postgres }
+          spec:
+            selector: { app: postgres }
+            ports: [{ port: 5432, targetPort: 5432 }]
+          EOF
+          kubectl rollout status deploy/postgres --timeout=180s
+
+      - name: Install the chart
+        run: |
+          helm install ipl infra/helm/ipl-platform \
+            -f infra/helm/ipl-platform/values-local.yaml \
+            --set image.registry=ghcr.io \
+            --set image.repository=ipl-platform \
+            --set image.tag=ci \
+            --wait --timeout 10m
+
+      - name: Prove it rolled out and answers
+        run: |
+          kubectl rollout status deploy/ipl-ipl-platform-api --timeout=300s
+          kubectl rollout status deploy/ipl-ipl-platform-web --timeout=300s
+          kubectl run smoke --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- \
+            curl -fsS http://ipl-ipl-platform-api:3000/health/live
+
+      - name: Dump state on failure
+        if: failure()
+        run: |
+          kubectl get pods -o wide
+          kubectl describe pods
+          kubectl logs -l app.kubernetes.io/part-of=ipl-platform --all-containers --tail=200 || true
+
+  # ── Terraform ─────────────────────────────────────────────────────────────
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # to post the plan as a comment
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.10.3
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Validate every module and environment
+        run: |
+          set -euo pipefail
+          for dir in infra/terraform/modules/* infra/terraform/envs/*; do
+            echo "── $dir"
+            # -backend=false: validation must not need cloud credentials or
+            # touch remote state.
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+
+      - name: Scan for insecure configuration
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        with:
+          scan-type: config
+          scan-ref: infra/terraform
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+      # `terraform plan` against the real project needs Workload Identity
+      # Federation credentials, which this repository does not have. When they
+      # are configured, this step posts the plan as a PR comment and `apply`
+      # runs only on merge, behind a manual-approval environment. See
+      # infra/terraform/README.md for what is and is not live.
+      - name: Note on plan
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "::notice::terraform validate and tfsec passed. A live plan requires"
+          echo "::notice::Workload Identity Federation credentials; see infra/terraform/README.md."

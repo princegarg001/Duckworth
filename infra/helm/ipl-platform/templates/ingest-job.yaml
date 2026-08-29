@@ -1,0 +1,68 @@
+{{- if .Values.ingest.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "ipl.fullname" . }}-migrate
+  labels:
+    {{- include "ipl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    # Runs BEFORE the new pods roll, and blocks the release if it fails.
+    #
+    # This is what makes a bad migration or a broken dataset stop the deploy
+    # rather than produce a fleet of pods serving data that does not
+    # reconcile. `hook-failed` is deliberately absent from the delete policy —
+    # a failed job's logs are the first thing anyone needs.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  # Two retries. A migration that fails three times is not going to succeed on
+  # the fourth; failing fast gets a human involved sooner.
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "ipl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "ipl.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "ipl.image" (dict "root" . "service" "ingest") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          # `all` = migrate -> load -> refresh marts -> verify. Exits non-zero
+          # if any of the 23 data-quality checks fails.
+          args: ['all']
+          envFrom:
+            - configMapRef:
+                name: {{ include "ipl.fullname" . }}-config
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:
+                name: {{ include "ipl.fullname" . }}-secrets
+            {{- end }}
+          resources:
+            {{- toYaml .Values.ingest.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: dataset
+              mountPath: /data/raw
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: dataset
+          # In a real deployment this is a PVC or a bucket-backed CSI volume
+          # holding the source archive. It is an emptyDir here so `helm
+          # template` and the kind CI job render without a cluster-specific
+          # storage class; the load step is a no-op when the directory is empty
+          # and the migration still runs.
+          emptyDir: {}
+{{- end }}

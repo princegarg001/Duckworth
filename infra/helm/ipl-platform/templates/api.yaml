@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ipl.fullname" . }}-api
+  labels:
+    {{- include "ipl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ipl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "ipl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+      annotations:
+        # Hashing the ConfigMap into the pod template makes a config change
+        # roll the pods. Without it, `helm upgrade` updates the ConfigMap and
+        # the running pods keep the old values until something else restarts
+        # them — a change that appears to deploy but does not take effect.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '{{ .Values.api.port }}'
+        prometheus.io/path: /metrics
+    spec:
+      serviceAccountName: {{ include "ipl.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # Must exceed SHUTDOWN_TIMEOUT_MS so the in-flight drain completes
+      # before the kubelet escalates to SIGKILL. See docs/runbook.md.
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.topologySpread.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ .Values.topologySpread.maxSkew }}
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: {{ .Values.topologySpread.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "ipl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ include "ipl.image" (dict "root" . "service" "api") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "ipl.fullname" . }}-config
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:
+                name: {{ include "ipl.fullname" . }}-secrets
+            {{- end }}
+          env:
+            - name: GIT_SHA
+              value: {{ .Values.image.tag | quote }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+          # Three probes, three different questions.
+          #
+          # startup:   "has it finished booting?" — gives a slow start as long
+          #            as it needs without loosening the liveness threshold.
+          # liveness:  "is the process wedged?" — hits /health/live, which
+          #            checks NO dependency. If it checked the database, one
+          #            database blip would restart every replica at once and
+          #            turn a recoverable incident into an outage.
+          # readiness: "can it serve?" — hits /health/ready, which checks
+          #            everything. A failing readiness pulls the pod out of the
+          #            Service without killing it, so it can recover in place.
+          startupProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          volumeMounts:
+            # readOnlyRootFilesystem is on, so anything that needs to write
+            # gets an explicit emptyDir.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ipl.fullname" . }}-api
+  labels:
+    {{- include "ipl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.api.port }}
+      targetPort: http
+      name: http
+  selector:
+    {{- include "ipl.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+{{- if .Values.api.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ipl.fullname" . }}-api
+  labels:
+    {{- include "ipl.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ipl.fullname" . }}-api
+  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      # Scale down slowly: flapping replicas cost more than the capacity saved.
+      stabilizationWindowSeconds: 300
+{{- end }}
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "ipl.fullname" . }}-api
+  labels:
+    {{- include "ipl.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "ipl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}

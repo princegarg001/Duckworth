@@ -1,0 +1,28 @@
+# OpenAPI linting.
+#
+# Runs in CI against the generated document. Because the document is generated
+# from Zod schemas, a Spectral failure means a *schema* needs a description or
+# a tag — the fix is always in code, never in a hand-edited spec.
+extends: ['spectral:oas']
+
+rules:
+  # Every operation must say what it does and where it belongs.
+  operation-description: error
+  operation-tags: error
+  operation-tag-defined: error
+  operation-operationId: off # Fastify derives these from the route; not hand-set.
+
+  # Server-side descriptions are the API's documentation.
+  info-description: error
+  info-contact: off
+  oas3-api-servers: error
+
+  # A response with no schema is undocumented.
+  oas3-valid-media-example: error
+  no-$ref-siblings: off # OpenAPI 3.1 permits them.
+
+  # Path style.
+  path-keys-no-trailing-slash: error
+  path-not-include-query: error
+  no-eval-in-markdown: error
+  no-script-tags-in-markdown: error

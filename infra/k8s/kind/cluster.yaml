@@ -1,0 +1,10 @@
+# Single-node kind cluster for CI.
+#
+# Its job is to prove the Helm chart actually applies and rolls out — not to
+# simulate production. A chart validated by a green kind job is more credible
+# than a live cluster nobody can afford to keep running.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ipl-ci
+nodes:
+  - role: control-plane

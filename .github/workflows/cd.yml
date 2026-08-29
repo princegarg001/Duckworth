@@ -1,0 +1,150 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (a git SHA). Leave blank for HEAD.'
+        required: false
+
+concurrency:
+  # Never two deploys at once, and never cancel one midway — a half-applied
+  # migration is worse than a queued deploy.
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy-web.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write # Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Resolve the image tag
+        id: tag
+        run: echo "sha=${{ inputs.image_tag || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      # Workload Identity Federation, not a service-account JSON key.
+      #
+      # A key is a long-lived credential that lives in a secret store, gets
+      # copied into a laptop for "just this once", and is still valid two years
+      # after the person who created it left. WIF exchanges this workflow's
+      # OIDC token for a short-lived access token, scoped to this repository
+      # and this branch. There is no key to leak, rotate, or forget.
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v2.1.7
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
+      # ── 1. Migrate, behind its own gate ─────────────────────────────────
+      #
+      # A separate, blocking step before any new code serves traffic. It runs
+      # the same `ingest all` the compose file and the Helm hook run, so it
+      # also re-verifies the 23 data-quality checks and fails the deploy if the
+      # data no longer reconciles.
+      #
+      # Migrations are expand-then-contract: add a column, backfill it, switch
+      # reads, and drop the old one in a *later* release. A destructive change
+      # in the same deploy that starts using it cannot be rolled back — see
+      # docs/runbook.md.
+      - name: Run migrations and verify data
+        run: |
+          gcloud run jobs update ipl-platform-ingest \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "${{ vars.ARTIFACT_REGISTRY }}/ingest:${{ steps.tag.outputs.sha }}"
+          gcloud run jobs execute ipl-platform-ingest \
+            --region "${{ vars.GCP_REGION }}" --wait
+
+      # ── 2. Deploy the API with no traffic, then smoke it ────────────────
+      - name: Deploy API revision (0% traffic)
+        run: |
+          gcloud run deploy ipl-platform-api \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "${{ vars.ARTIFACT_REGISTRY }}/api:${{ steps.tag.outputs.sha }}" \
+            --revision-suffix "${{ steps.tag.outputs.sha }}" \
+            --no-traffic \
+            --set-env-vars "GIT_SHA=${{ steps.tag.outputs.sha }},SERVICE_VERSION=${{ steps.tag.outputs.sha }}"
+
+      - name: Smoke test the new revision directly
+        id: smoke
+        run: |
+          set -euo pipefail
+          url=$(gcloud run revisions describe "ipl-platform-api-${{ steps.tag.outputs.sha }}" \
+                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          echo "probing $url"
+
+          # Readiness must be genuinely ok — not merely reachable. It reports
+          # migration state, mart freshness and data-quality failures, so this
+          # single check catches a deploy against a database that did not
+          # migrate or data that did not reconcile.
+          body=$(curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$url/health/ready")
+          echo "$body"
+          echo "$body" | grep -q '"status":"ok"' || {
+            echo "::error::New revision is not ready"; exit 1;
+          }
+
+          # And the numbers must still be right.
+          curl -fsS "$url/v1/seasons/2022/points-table" \
+            | grep -q '"netRunRate":0.316' || {
+            echo "::error::Points table does not match the published standings"; exit 1;
+          }
+
+      - name: Shift 10% of traffic
+        run: |
+          gcloud run services update-traffic ipl-platform-api \
+            --region "${{ vars.GCP_REGION }}" \
+            --to-revisions "ipl-platform-api-${{ steps.tag.outputs.sha }}=10"
+
+      - name: Watch error rate before promoting
+        run: |
+          # Give the canary real traffic before committing to it. A revision
+          # that fails only under load fails here rather than at 100%.
+          sleep 60
+          url=$(gcloud run services describe ipl-platform-api \
+                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          for i in $(seq 1 10); do
+            curl -fsS "$url/health/ready" >/dev/null || {
+              echo "::error::Canary failing; rolling back"; exit 1;
+            }
+            sleep 2
+          done
+
+      - name: Promote to 100%
+        run: |
+          gcloud run services update-traffic ipl-platform-api \
+            --region "${{ vars.GCP_REGION }}" --to-latest
+
+      # ── 3. Web ──────────────────────────────────────────────────────────
+      - name: Deploy web
+        id: deploy-web
+        run: |
+          gcloud run deploy ipl-platform-web \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "${{ vars.ARTIFACT_REGISTRY }}/web:${{ steps.tag.outputs.sha }}"
+          url=$(gcloud run services describe ipl-platform-web \
+                 --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          echo "::warning::Deploy failed; returning all traffic to the previous revision"
+          gcloud run services update-traffic ipl-platform-api \
+            --region "${{ vars.GCP_REGION }}" \
+            --to-revisions "PREVIOUS=100" || true

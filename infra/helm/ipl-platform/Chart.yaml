@@ -1,0 +1,9 @@
+apiVersion: v2
+name: ipl-platform
+description: IPL data platform — Fastify API, Next.js web, and a one-shot ingest job
+type: application
+version: 1.0.0
+appVersion: '1.0.0'
+keywords: [cricket, analytics, postgres]
+maintainers:
+  - name: princegarg001

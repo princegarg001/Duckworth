@@ -1,0 +1,135 @@
+# Default values. Environment overlays live in values-local.yaml and
+# values-prod.yaml; nothing sensitive appears in any of them.
+
+nameOverride: ''
+fullnameOverride: ''
+
+image:
+  registry: ghcr.io
+  repository: princegarg001/ipl-platform
+  # Overridden per deploy with the immutable :sha tag built in CI. `latest` is
+  # never deployed — you cannot roll back to a tag that moves.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+api:
+  replicaCount: 2
+  port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      # Memory has a limit; CPU deliberately does not.
+      #
+      # A CPU limit throttles at the boundary even when the node is idle, which
+      # turns a latency spike into a latency cliff — the container is stopped
+      # mid-request for the rest of its 100ms quota. Requests already guarantee
+      # a share under contention, which is what the scheduler actually needs.
+      # Memory is different: it is incompressible, so an unbounded container
+      # takes the node down with it.
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+  env:
+    LOG_LEVEL: info
+    CACHE_TTL_SECONDS: '60'
+    RATE_LIMIT_MAX: '300'
+    # Must stay below terminationGracePeriodSeconds so the drain finishes
+    # before the kubelet sends SIGKILL.
+    SHUTDOWN_TIMEOUT_MS: '10000'
+    OTEL_ENABLED: 'true'
+
+web:
+  replicaCount: 2
+  port: 3001
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 384Mi
+  autoscaling:
+    enabled: false
+
+ingest:
+  # Runs as a pre-upgrade Job so the schema is migrated and the data verified
+  # before any new pod starts serving.
+  enabled: true
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: ipl.example.com
+  tls:
+    enabled: true
+    secretName: ipl-platform-tls
+
+# Secrets come from an external store, never from this file. The chart renders
+# an ExternalSecret; the values below only name where to look.
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: gcp-secret-manager
+    kind: ClusterSecretStore
+  refreshInterval: 1h
+  # key = env var in the container, remoteKey = name in the secret store
+  data:
+    - key: DATABASE_URL
+      remoteKey: ipl-database-url
+    - key: REDIS_URL
+      remoteKey: ipl-redis-url
+    - key: INTERNAL_API_TOKEN
+      remoteKey: ipl-internal-api-token
+
+# Applied to every pod. `readOnlyRootFilesystem` is the one most often skipped;
+# neither service writes to disk, so there is no reason to allow it.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  privileged: false
+  capabilities:
+    drop: ['ALL']
+
+# Spread replicas across nodes so losing one node cannot take the service down.
+topologySpread:
+  enabled: true
+  maxSkew: 1
+  whenUnsatisfiable: ScheduleAnyway
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  # Default-deny egress with an explicit allowlist. The API needs Postgres,
+  # Redis, DNS and the OTLP collector, and nothing else.
+  enabled: true
+  postgresPort: 5432
+  redisPort: 6379
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ''
+
+otel:
+  endpoint: http://opentelemetry-collector.observability.svc.cluster.local:4318

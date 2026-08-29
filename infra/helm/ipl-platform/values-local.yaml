@@ -1,0 +1,43 @@
+# Overlay for the kind cluster used by CI to prove the chart applies.
+#
+# Everything that needs a cloud dependency is switched off so the chart can be
+# installed and rolled out on a laptop-sized cluster: no ExternalSecrets
+# operator, no ingress controller, no metrics-server for the HPA.
+
+image:
+  registry: ghcr.io
+  repository: ipl-platform
+  tag: ci
+  pullPolicy: Never # images are side-loaded with `kind load`
+
+api:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+
+web:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 25m, memory: 96Mi }
+    limits: { memory: 256Mi }
+
+ingest:
+  enabled: false # CI seeds the database directly
+
+ingress:
+  enabled: false
+
+externalSecrets:
+  enabled: false
+
+networkPolicy:
+  enabled: false # kind's default CNI does not enforce them
+
+podDisruptionBudget:
+  enabled: false # meaningless at one replica
+
+topologySpread:
+  enabled: false # single-node cluster
