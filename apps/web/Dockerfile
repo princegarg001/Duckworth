@@ -58,6 +58,14 @@ ENV NODE_ENV=production \
     PORT=3001 \
     HOSTNAME=0.0.0.0
 
+# node:*-bookworm-slim carries whatever libssl3 was current when that image
+# last rebuilt; when a CVE lands in between rebuilds, this image carries it
+# until upstream republishes. Unlike the distroless runtimes, this base still
+# has apt, so the fix is just pulling the patched package from Debian's own
+# security repo directly.
+RUN apt-get update && apt-get install -y --only-upgrade libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
 # node:slim ships a `node` user (uid 1000); use it rather than root.
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static

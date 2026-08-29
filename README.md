@@ -491,6 +491,15 @@ imply more than is true.
 | Cloud Run deploy    | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`)                                                |
 | Terraform           | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** |
 
+**Live deployment (Azure Container Apps):**
+
+| Service | URL |
+| ------- | --- |
+| Web     | https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io |
+| API     | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io |
+| Docs    | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs |
+| Health  | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/health/ready |
+
 <!-- LIVE_URLS -->
 
 ### Deploying

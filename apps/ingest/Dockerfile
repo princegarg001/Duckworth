@@ -67,12 +67,29 @@ RUN curl -sSLf -o ipl.zip "$DATASET_URL" \
  && test -n "$(find raw -type d -name match_innings_commentary)" \
  && echo "dataset embedded: $(find raw -type f | wc -l) files"
 
+# distroless/nodejs22-debian12 bundles whatever libssl3 was current when that
+# base image last rebuilt; when a CVE lands in between rebuilds, this image
+# carries it until Google republishes. Debian's own security repo already has
+# the fix, so pull just the two shared objects from a fresh install here and
+# overwrite distroless's copies below — no shell or package manager ends up in
+# the runtime image, only the two .so files change.
+FROM debian:12-slim AS libssl-patch
+RUN apt-get update && apt-get install -y --no-install-recommends libssl3 \
+    && dpkg-query -s libssl3 | grep -v '^Status:' > /libssl3.status \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM gcr.io/distroless/nodejs${NODE_VERSION}-debian12:nonroot AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
     SOURCE_DIR=/data/raw
 
+COPY --from=libssl-patch /usr/lib/x86_64-linux-gnu/libssl.so.3 /usr/lib/x86_64-linux-gnu/libssl.so.3
+COPY --from=libssl-patch /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+# Also correct the package database's version record — Trivy scans dpkg
+# metadata, not the binaries, so leaving the old entry in place would still
+# report the (already-patched) library as vulnerable.
+COPY --from=libssl-patch /libssl3.status /var/lib/dpkg/status.d/libssl3
 COPY --from=build --chown=nonroot:nonroot /out ./
 COPY --from=dataset --chown=nonroot:nonroot /dataset/raw /data/raw
 
