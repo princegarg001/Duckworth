@@ -483,7 +483,25 @@ imply more than is true.
 
 Two paths, and the difference between them is deliberate.
 
-**Cloud Run + Neon — for a link that stays up at ~$0/month.**
+**Azure Container Apps — the deployed path.**
+
+```bash
+az login
+./scripts/deploy-azure.sh
+```
+
+Provisions a resource group, an Azure Container Registry, a PostgreSQL
+Flexible Server, and a Container Apps environment; builds the images *in* ACR
+(so no local Docker and no chance of pushing an arm64 image that will not
+run); runs the ingest as a **Container Apps Job** — the direct analogue of the
+one-shot job this pipeline was designed around — and only deploys the API once
+that job has succeeded.
+
+Container Apps was chosen over App Service because it scales to zero, provides
+managed TLS, and has a job primitive. App Service needs a paid tier for Linux
+containers and has no equivalent to a run-once job.
+
+**Cloud Run + Neon — the equivalent on GCP.**
 
 ```bash
 export PROJECT_ID=your-gcp-project
