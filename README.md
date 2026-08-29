@@ -493,11 +493,11 @@ imply more than is true.
 
 **Live deployment (Azure Container Apps):**
 
-| Service | URL |
-| ------- | --- |
-| Web     | https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io |
-| API     | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io |
-| Docs    | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs |
+| Service | URL                                                                              |
+| ------- | -------------------------------------------------------------------------------- |
+| Web     | https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io              |
+| API     | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io              |
+| Docs    | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs         |
 | Health  | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/health/ready |
 
 <!-- LIVE_URLS -->
