@@ -106,7 +106,14 @@ az postgres flexible-server firewall-rule create \
   --only-show-errors -o none 2>/dev/null || true
 
 az postgres flexible-server db create \
-  -g "$RG" -s "$PG_SERVER" -d "$PG_DB" --only-show-errors -o none 2>/dev/null || true
+  -g "$RG" -s "$PG_SERVER" -n "$PG_DB" --only-show-errors -o none 2>/dev/null || true
+
+# The create above swallows its error (a rerun's "already exists" is
+# expected), which once hid a wrong flag name silently failing every time —
+# the ingest job would then fail deep inside a container with "database
+# does not exist". Confirm the database is actually there before proceeding.
+az postgres flexible-server db show -g "$RG" -s "$PG_SERVER" -n "$PG_DB" \
+  --only-show-errors -o none 2>/dev/null || die "database '$PG_DB' does not exist on $PG_SERVER and could not be created"
 
 # On a re-run the server already exists and the password generated above is not
 # the one it has. Set it, so the connection string is correct either way.
