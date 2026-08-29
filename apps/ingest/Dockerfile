@@ -52,7 +52,13 @@ COPY --from=build --chown=nonroot:nonroot /out ./
 
 USER nonroot
 
+# The distroless nodejs image's own ENTRYPOINT is `/nodejs/bin/node`. Declaring
+# our own replaces it, so node has to be named explicitly — otherwise the
+# runtime tries to exec the .js file directly and fails on a missing
+# interpreter. Naming it here keeps `docker run <image> migrate` working, with
+# the subcommand as the only argument a caller has to think about.
+#
 # `all` = migrate -> load -> refresh -> verify, exiting non-zero on any failed
-# check. Override with `["dist/cli.js","migrate"]` for a migrate-only job.
-ENTRYPOINT ["dist/cli.js"]
+# check.
+ENTRYPOINT ["/nodejs/bin/node", "dist/cli.js"]
 CMD ["all"]

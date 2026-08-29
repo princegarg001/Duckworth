@@ -21,7 +21,8 @@
   "files": [
     "dist",
     "migrations",
-    "checks"
+    "checks",
+    "marts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

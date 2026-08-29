@@ -312,6 +312,14 @@ export async function buildApp(env: ApiEnv, overrides: { db?: DbHandle } = {}) {
     },
   );
 
+  // @fastify/swagger-ui serves the document at /docs/json. Exposing it at the
+  // conventional /openapi.json as well means the URL in the README, the CI
+  // contract job and any client generator all point at the same place.
+  app.get('/openapi.json', { schema: { hide: true } }, async (_request, reply) => {
+    reply.header('cache-control', 'public, max-age=300');
+    return reply.send(app.swagger());
+  });
+
   app.get('/', { schema: { hide: true } }, async (_request, reply) =>
     reply.redirect('/docs', 302),
   );
