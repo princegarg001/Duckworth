@@ -279,6 +279,15 @@ async function main(): Promise<number> {
 main()
   .then((code) => process.exit(code))
   .catch((err: unknown) => {
-    process.stderr.write(`\n✗ ingest failed: ${err instanceof Error ? err.stack : String(err)}\n`);
+    // drizzle-orm wraps query failures in DrizzleQueryError and puts the
+    // real driver error on `.cause` — `.stack` alone omits it, which is why
+    // failures used to print an empty, useless message.
+    let message = err instanceof Error ? err.stack : String(err);
+    let cause = err instanceof Error ? err.cause : undefined;
+    while (cause instanceof Error) {
+      message += `\nCaused by: ${cause.stack}`;
+      cause = cause.cause;
+    }
+    process.stderr.write(`\n✗ ingest failed: ${message}\n`);
     process.exit(1);
   });
