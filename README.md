@@ -465,7 +465,7 @@ using it cannot be rolled back.
 
 ---
 
-## Deployment — what is and is not live
+## Deployment
 
 Being precise about this, because it is the easiest place in a submission to
 imply more than is true.
@@ -474,27 +474,59 @@ imply more than is true.
 |---|---|
 | `docker compose up` | **Works**, verified in CI on every push against a clean clone |
 | Helm chart | **Validated by applying it** — CI spins a kind cluster, installs, waits for rollout, curls the API |
-| Terraform | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** — no billing account is attached to this submission |
-| Public URL | **Not deployed.** See below |
+| Cloud Run deploy | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`) |
+| Terraform | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** |
 
-There is no live URL. Standing one up needs a cloud account with billing, and
-publishing a link that dies in three weeks is worse than publishing none — a
-dead link is the first thing a reviewer clicks.
+<!-- LIVE_URLS -->
 
-What exists instead is everything needed to deploy in one command, and CI proof
-that each piece works:
+### Deploying
+
+Two paths, and the difference between them is deliberate.
+
+**Cloud Run + Neon — for a link that stays up at ~$0/month.**
 
 ```bash
-# Cloud Run (recommended: scale-to-zero, ~$0–5/month)
-terraform -chdir=infra/terraform/envs/prod apply -var="image_tag=$(git rev-parse --short HEAD)"
-
-# Or any Kubernetes cluster
-helm upgrade --install ipl infra/helm/ipl-platform -f infra/helm/ipl-platform/values-prod.yaml \
-  --set image.tag=$(git rev-parse --short HEAD)
+export PROJECT_ID=your-gcp-project
+export DATABASE_URL='postgres://…@ep-xxx.neon.tech/ipl?sslmode=require'
+./scripts/deploy-cloudrun.sh
 ```
 
-The CD workflow is complete and needs two repository secrets
-(`GCP_WIF_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`) to run.
+Roughly five minutes. The script enables the APIs, creates the image
+repository, builds `linux/amd64` images, runs the ingest as a Cloud Run Job —
+which migrates, loads, refreshes the marts and runs the 23 quality checks,
+failing the deploy if any of them fails — deploys the API, smoke-tests it
+(including that the points table still reads `+0.316` for GT), then builds the
+web image **against the API's real URL** and deploys it.
+
+That last ordering is not incidental: Next inlines `NEXT_PUBLIC_API_URL` at
+build time, so the web image cannot be built until Cloud Run has assigned the
+API a URL. CORS starts pinned to an unroutable origin and is narrowed to the
+web URL once it exists, so there is never a window in which the API is open.
+
+The ingest image **contains the dataset**. A Cloud Run Job has no host
+directory to mount, so the 33MB of source JSON is baked in at build time — the
+image tag therefore identifies the exact bytes that were loaded, and
+`docker run <image> all` is self-contained.
+
+**Terraform — for a real environment.**
+
+```bash
+terraform -chdir=infra/terraform/envs/prod apply -var="image_tag=$(git rev-parse --short HEAD)"
+```
+
+Provisions a private-IP Cloud SQL instance with PITR, a VPC connector,
+Artifact Registry with immutable tags, and both Cloud Run services with secrets
+injected from Secret Manager by reference. That is the right shape for
+production and costs ~$25/month; the script above is the right shape for a
+link on a submission. Both are in the repository, and only one of them has
+been run.
+
+**Continuous deployment** is wired in `cd.yml` and needs two repository
+secrets (`GCP_WIF_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`) plus two variables
+(`GCP_REGION`, `ARTIFACT_REGISTRY`). It authenticates by Workload Identity
+Federation rather than a service-account key, runs migrations as a separate
+blocking job, deploys the API at 0% traffic, smoke-tests the revision
+directly, canaries at 10%, and only then promotes.
 
 ---
 

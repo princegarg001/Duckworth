@@ -42,6 +42,31 @@ RUN pnpm --filter @ipl/config --filter @ipl/domain --filter @ipl/observability \
 
 RUN pnpm --filter @ipl/ingest deploy --legacy --prod /out
 
+# ── dataset ─────────────────────────────────────────────────────────────────
+# The dataset is baked into the image rather than mounted at runtime.
+#
+# This job runs as a Cloud Run Job or a Kubernetes Job, where there is no host
+# directory to bind-mount and no obvious place to put 33MB of JSON. Embedding it
+# makes the image self-contained — `docker run <image> all` migrates, loads,
+# refreshes and verifies with no external volume — and means the image tag
+# identifies the exact bytes that were loaded.
+#
+# docker-compose overrides SOURCE_DIR to a read-only bind mount instead, so
+# local development still reads from the working tree.
+FROM node:${NODE_VERSION}-bookworm-slim AS dataset
+ARG DATASET_URL="https://aiko-cricket-tips-cyeef3d8fjcfb4e0.z02.azurefd.net/core-aiko-archive/Indian_Premier_League_2022-03-26.zip?sp=r&st=2026-08-01T10:01:46Z&se=2027-04-01T18:16:46Z&sv=2026-02-06&sr=b&sig=fe6UVJbR9zAnZ%2FACgFBeJdpnM6xzonkElXr5nC35%2B9o%3D"
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /dataset
+# Fail the build rather than ship an image that would load nothing: an empty
+# or truncated download must not become a silently empty database.
+RUN curl -sSLf -o ipl.zip "$DATASET_URL" \
+ && unzip -q ipl.zip -d raw \
+ && rm ipl.zip \
+ && test -n "$(find raw -type d -name match_innings_commentary)" \
+ && echo "dataset embedded: $(find raw -type f | wc -l) files"
+
 FROM gcr.io/distroless/nodejs${NODE_VERSION}-debian12:nonroot AS runtime
 WORKDIR /app
 
@@ -49,6 +74,7 @@ ENV NODE_ENV=production \
     SOURCE_DIR=/data/raw
 
 COPY --from=build --chown=nonroot:nonroot /out ./
+COPY --from=dataset --chown=nonroot:nonroot /dataset/raw /data/raw
 
 USER nonroot
 
