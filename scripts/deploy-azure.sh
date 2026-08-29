@@ -28,9 +28,6 @@ RG="${RG:-ipl-platform}"
 # Flexible Server are both available there.
 LOCATION="${LOCATION:-centralindia}"
 ENV_NAME="${ENV_NAME:-ipl-env}"
-# ACR names are globally unique and must be alphanumeric only.
-ACR="${ACR:-iplacr$(date +%s | tail -c 6)}"
-PG_SERVER="${PG_SERVER:-ipl-pg-$(date +%s | tail -c 6)}"
 PG_ADMIN="${PG_ADMIN:-ipladmin}"
 PG_DB="ipl"
 TAG="${TAG:-$(git rev-parse --short HEAD)}"
@@ -59,6 +56,23 @@ wait
 # ── Resource group ──────────────────────────────────────────────────────────
 say "Resource group ${RG}"
 az group create -n "$RG" -l "$LOCATION" --only-show-errors -o none
+
+# ── Resolve resource names ──────────────────────────────────────────────────
+# Registry and server names are globally unique, so they carry a random suffix.
+# That suffix must NOT be regenerated on a re-run, or the second attempt builds
+# a whole second stack beside the first. Adopt what is already in the group;
+# only mint a new name when there is nothing to adopt.
+if [ -z "${ACR:-}" ]; then
+  ACR="$(az acr list -g "$RG" --query '[0].name' -o tsv 2>/dev/null || true)"
+  [ -n "$ACR" ] && echo "  adopting existing registry: $ACR"
+fi
+[ -z "${ACR:-}" ] && ACR="iplacr$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+
+if [ -z "${PG_SERVER:-}" ]; then
+  PG_SERVER="$(az postgres flexible-server list -g "$RG" --query '[0].name' -o tsv 2>/dev/null || true)"
+  [ -n "$PG_SERVER" ] && echo "  adopting existing database: $PG_SERVER"
+fi
+[ -z "${PG_SERVER:-}" ] && PG_SERVER="ipl-pg-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 
 # ── Container registry ──────────────────────────────────────────────────────
 # Basic tier. `az acr build` builds *in Azure*, so no local Docker is needed and
@@ -92,6 +106,11 @@ az postgres flexible-server firewall-rule create \
 
 az postgres flexible-server db create \
   -g "$RG" -s "$PG_SERVER" -d "$PG_DB" --only-show-errors -o none 2>/dev/null || true
+
+# On a re-run the server already exists and the password generated above is not
+# the one it has. Set it, so the connection string is correct either way.
+az postgres flexible-server update -n "$PG_SERVER" -g "$RG" \
+  --admin-password "$PG_PASSWORD" --only-show-errors -o none
 
 PG_HOST="$(az postgres flexible-server show -n "$PG_SERVER" -g "$RG" --query fullyQualifiedDomainName -o tsv)"
 DATABASE_URL="postgres://${PG_ADMIN}:${PG_PASSWORD}@${PG_HOST}:5432/${PG_DB}?sslmode=require"
@@ -130,18 +149,28 @@ az containerapp job create \
   --env-vars "DATABASE_URL=secretref:db-url" "DATABASE_SSL=true" "LOG_LEVEL=info" \
   --only-show-errors -o none
 
-az containerapp job start -n ipl-ingest -g "$RG" --only-show-errors -o none
-say "Waiting for the ingest to finish"
-for i in $(seq 1 60); do
-  STATUS="$(az containerapp job execution list -n ipl-ingest -g "$RG" \
-            --query '[0].properties.status' -o tsv 2>/dev/null || echo Running)"
+# Capture the execution name rather than polling "the first one": the list is
+# not ordered, so [0] can be a previous run and the script would declare
+# success on stale output.
+EXEC_NAME="$(az containerapp job start -n ipl-ingest -g "$RG" --query name -o tsv)"
+say "Waiting for ingest execution ${EXEC_NAME}"
+for i in $(seq 1 90); do
+  STATUS="$(az containerapp job execution show -n ipl-ingest -g "$RG" \
+            --job-execution-name "$EXEC_NAME" --query 'properties.status' -o tsv 2>/dev/null || echo Running)"
   case "$STATUS" in
-    Succeeded) echo "  ingest succeeded"; break ;;
-    Failed)    az containerapp job logs show -n ipl-ingest -g "$RG" --tail 60 2>/dev/null || true
-               die "ingest failed — a data-quality check did not pass" ;;
-    *)         printf '.'; sleep 10 ;;
+    Succeeded)
+      echo "  ingest succeeded"
+      break ;;
+    Failed|Degraded)
+      echo "  ingest failed — logs follow:"
+      az containerapp job logs show -n ipl-ingest -g "$RG" \
+        --container ipl-ingest --tail 80 2>/dev/null || \
+        echo "  (fetch logs with: az containerapp job execution show -n ipl-ingest -g $RG --job-execution-name $EXEC_NAME)"
+      die "ingest failed — most likely a data-quality check did not pass" ;;
+    *)
+      printf '.'; sleep 10 ;;
   esac
-  [ "$i" = 60 ] && die "ingest timed out"
+  [ "$i" = 90 ] && die "ingest timed out after 15 minutes"
 done
 
 # ── API ─────────────────────────────────────────────────────────────────────
