@@ -252,15 +252,56 @@ say "Restricting CORS to ${WEB_URL}"
 az containerapp update -n ipl-api -g "$RG" \
   --set-env-vars "CORS_ORIGINS=${WEB_URL}" --only-show-errors -o none
 
+# ── Observability (Prometheus + Grafana) ────────────────────────────────────
+# Container Apps has no ConfigMap/volume-mount primitive, so — like the web
+# image baking in NEXT_PUBLIC_API_URL — the scrape target and the datasource
+# URL are baked into custom images at build time rather than mounted.
+say "Building and deploying Prometheus + Grafana"
+docker buildx build --platform linux/amd64 -f infra/prometheus/Dockerfile \
+  -t "${ACR_SERVER}/prometheus:${TAG}" --push infra/prometheus
+docker buildx build --platform linux/amd64 -f infra/grafana/Dockerfile \
+  -t "${ACR_SERVER}/grafana:${TAG}" --push infra/grafana
+
+az containerapp create \
+  -n ipl-prometheus -g "$RG" --environment "$ENV_NAME" \
+  --image "${ACR_SERVER}/prometheus:${TAG}" \
+  --registry-server "$ACR_SERVER" --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
+  --target-port 9090 --ingress internal \
+  --cpu 0.5 --memory 1Gi --min-replicas 1 --max-replicas 1 \
+  --only-show-errors -o none 2>/dev/null \
+|| az containerapp update -n ipl-prometheus -g "$RG" \
+     --image "${ACR_SERVER}/prometheus:${TAG}" --only-show-errors -o none
+
+# Grafana's admin password is generated fresh on every deploy and printed
+# once below — it is a Container Apps secret, never written to disk, and
+# deliberately never appears in the README (gitleaks would fail the build).
+GRAFANA_PASSWORD="$(openssl rand -hex 12)"
+az containerapp create \
+  -n ipl-grafana -g "$RG" --environment "$ENV_NAME" \
+  --image "${ACR_SERVER}/grafana:${TAG}" \
+  --registry-server "$ACR_SERVER" --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
+  --target-port 3000 --ingress external \
+  --cpu 0.5 --memory 1Gi --min-replicas 1 --max-replicas 1 \
+  --secrets "admin-password=${GRAFANA_PASSWORD}" \
+  --env-vars "GF_SECURITY_ADMIN_USER=admin" "GF_SECURITY_ADMIN_PASSWORD=secretref:admin-password" \
+             "GF_AUTH_ANONYMOUS_ENABLED=false" "GF_USERS_ALLOW_SIGN_UP=false" \
+  --only-show-errors -o none 2>/dev/null \
+|| az containerapp update -n ipl-grafana -g "$RG" \
+     --image "${ACR_SERVER}/grafana:${TAG}" --only-show-errors -o none
+
+GRAFANA_FQDN="$(az containerapp show -n ipl-grafana -g "$RG" --query 'properties.configuration.ingress.fqdn' -o tsv)"
+GRAFANA_URL="https://${GRAFANA_FQDN}"
+
 cat <<EOF
 
 ┌──────────────────────────────────────────────────────────────────
 │  Deployed to Azure Container Apps
 │
-│    Web      ${WEB_URL}
-│    API      ${API_URL}
-│    Docs     ${API_URL}/docs
-│    Health   ${API_URL}/health/ready
+│    Web       ${WEB_URL}
+│    API       ${API_URL}
+│    Docs      ${API_URL}/docs
+│    Health    ${API_URL}/health/ready
+│    Grafana   ${GRAFANA_URL}
 │
 │  Resource group : ${RG}   (delete everything: az group delete -n ${RG} --yes)
 │  Registry       : ${ACR_SERVER}
@@ -269,7 +310,10 @@ cat <<EOF
 │  Store these — they are not written to disk:
 │    postgres password : ${PG_PASSWORD}
 │    internal token    : ${INTERNAL_TOKEN}
+│    grafana password  : ${GRAFANA_PASSWORD} (only set on first deploy; a
+│                         rerun's 'update' path does not reset it)
 └──────────────────────────────────────────────────────────────────
 
-Next: put the two URLs in the README at the <!-- LIVE_URLS --> marker.
+Next: put the URLs in the README at the <!-- LIVE_URLS --> marker. Never
+commit the Grafana password — share it separately.
 EOF

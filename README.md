@@ -532,6 +532,12 @@ setup wizard between cloning this repository and seeing real numbers move.
 | Prometheus             | http://localhost:9090                          |
 | Raw metrics (any time) | http://localhost:3000/metrics                  |
 
+This same stack is also **deployed and live**, not just runnable locally —
+`scripts/deploy-azure.sh` builds and deploys Prometheus and Grafana as two
+more Container Apps against the real API, the same way it deploys everything
+else. See [Live deployment](#deployment) for the URL; Grafana's credentials
+there are shared separately rather than committed to this file.
+
 **The dashboard, row by row** — every panel below queries a metric the API
 already emits; nothing in Grafana is a second source of truth:
 
@@ -643,12 +649,13 @@ imply more than is true.
 
 **Live deployment (Azure Container Apps):**
 
-| Service | URL                                                                              |
-| ------- | -------------------------------------------------------------------------------- |
-| Web     | https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io              |
-| API     | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io              |
-| Docs    | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs         |
-| Health  | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/health/ready |
+| Service | URL                                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web     | https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io                                                                                                      |
+| API     | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io                                                                                                      |
+| Docs    | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs                                                                                                 |
+| Health  | https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/health/ready                                                                                         |
+| Grafana | https://ipl-grafana.icytree-bb74c5d4.centralindia.azurecontainerapps.io — credentials shared separately, not committed here (gitleaks would fail the build on it anyway) |
 
 <!-- LIVE_URLS -->
 
@@ -664,11 +671,15 @@ az login
 ```
 
 Provisions a resource group, an Azure Container Registry, a PostgreSQL
-Flexible Server, and a Container Apps environment; builds the images _in_ ACR
-(so no local Docker and no chance of pushing an arm64 image that will not
-run); runs the ingest as a **Container Apps Job** — the direct analogue of the
-one-shot job this pipeline was designed around — and only deploys the API once
-that job has succeeded.
+Flexible Server, and a Container Apps environment; builds every image locally
+with `docker buildx --platform linux/amd64` and pushes to ACR (`az acr build`
+— ACR Tasks — is blocked on Azure for Students subscriptions, so this is a
+deliberate workaround, not the default path on a subscription without that
+restriction); runs the ingest as a **Container Apps Job** — the direct
+analogue of the one-shot job this pipeline was designed around — and only
+deploys the API once that job has succeeded. It finishes by building and
+deploying Prometheus and Grafana the same way — see
+[Observability](#observability).
 
 Container Apps was chosen over App Service because it scales to zero, provides
 managed TLS, and has a job primitive. App Service needs a paid tier for Linux

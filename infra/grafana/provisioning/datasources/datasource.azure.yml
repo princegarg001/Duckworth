@@ -1,0 +1,23 @@
+# Azure variant: points at the Prometheus Container App's predictable internal
+# FQDN (<app-name>.internal.<environment-suffix>.<region>.azurecontainerapps.io)
+# instead of the compose service name. Internal ingress means only other apps
+# in the same Container Apps environment can reach it — never the public
+# internet — so metrics storage stays unauthenticated on purpose without being
+# exposed.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # Container Apps ingress enforces TLS even for internal-only traffic and
+    # 301s a plain http:// request — Grafana's proxy does not follow that
+    # redirect, which surfaced as an opaque 400 on the datasource health check.
+    url: https://ipl-prometheus.internal.icytree-bb74c5d4.centralindia.azurecontainerapps.io
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      prometheusVersion: 3.1.0
