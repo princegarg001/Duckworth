@@ -88,8 +88,8 @@ module "runtime" {
   image_web    = "${module.registry.repository_url}/web:${var.image_tag}"
   image_ingest = "${module.registry.repository_url}/ingest:${var.image_tag}"
 
-  vpc_connector_id  = module.network.vpc_connector_id
-  database_url_secret = module.database.database_url_secret_id
+  vpc_connector_id      = module.network.vpc_connector_id
+  database_url_secret   = module.database.database_url_secret_id
   internal_token_secret = google_secret_manager_secret.internal_token.secret_id
 
   allowed_origins = ["https://${var.domain}"]
