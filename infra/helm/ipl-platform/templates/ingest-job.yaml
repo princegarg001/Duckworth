@@ -43,7 +43,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "ipl.fullname" . }}-config
-            {{- if .Values.externalSecrets.enabled }}
+            {{- if .Values.secrets.mount }}
             - secretRef:
                 name: {{ include "ipl.fullname" . }}-secrets
             {{- end }}

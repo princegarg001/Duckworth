@@ -76,6 +76,25 @@ ingress:
     enabled: true
     secretName: ipl-platform-tls
 
+# Two independent questions, deliberately not one flag:
+#   secrets.mount        — does a Secret named <release>-secrets exist and
+#                           need wiring into api/ingest's envFrom? Almost
+#                           always yes; the only exception is a values file
+#                           for a cluster with no database at all.
+#   externalSecrets.enabled — should THIS chart render the ExternalSecret CR
+#                           that PRODUCES that Secret from a vault? No, when
+#                           something else creates it instead — a values file
+#                           for a kind cluster with no ExternalSecrets
+#                           operator installed, where CI pre-creates a plain
+#                           Secret with kubectl before `helm install`.
+# Collapsing these into one flag is exactly the bug that shipped here once:
+# values-local.yaml correctly disabled the operator, which also silently
+# skipped wiring in the Secret the CI workflow had already created, and the
+# API crash-looped on a missing DATABASE_URL with no clue why from the chart
+# itself.
+secrets:
+  mount: true
+
 # Secrets come from an external store, never from this file. The chart renders
 # an ExternalSecret; the values below only name where to look.
 externalSecrets:
