@@ -1,5 +1,18 @@
 # IPL Data Platform
 
+[![CI](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/ci.yml)
+[![CD](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/cd.yml?branch=main&label=CD&logo=githubactions&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/cd.yml)
+[![Infrastructure](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/infra.yml?branch=main&label=Helm%20%2B%20Terraform&logo=githubactions&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/infra.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/codeql.yml?branch=main&label=CodeQL&logo=github&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
+[![Node](https://img.shields.io/badge/node-22-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](tsconfig.base.json)
+
+**[🌐 Live web app](https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io)** ·
+**[📖 API docs](https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs)** ·
+**[📊 Grafana](https://ipl-grafana.icytree-bb74c5d4.centralindia.azurecontainerapps.io)** ·
+**[💚 Health](https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/health/ready)**
+
 Ball-by-ball analytics for IPL 2022, modelled at **one row per delivery** —
 17,912 of them — with every served figure derived from those deliveries and
 reconciled against the published scorecards by an automated data contract.
@@ -363,17 +376,58 @@ GET  /v1/players/{id}/form
 POST /internal/refresh-marts              service-token guarded
 ```
 
+<p align="center">
+  <img src="docs/images/api-docs.png" width="850" alt="Swagger UI, generated from the same Zod schemas that validate every request">
+  <br/>
+  <sub>Live: <a href="https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs">/docs</a> — every schema on this page is generated, none hand-written.</sub>
+</p>
+
 ### The contract cannot drift
 
-```
-Zod schemas ──> OpenAPI 3.1 ──> generated TS types ──> frontend client
- (one source)     (emitted)        (openapi-typescript)   (openapi-fetch)
+```mermaid
+flowchart LR
+    Z["Zod schemas<br/>packages/contracts"] -->|"one source"| O["OpenAPI 3.1<br/>openapi.json"]
+    O -->|"openapi-typescript"| T["Generated TS types<br/>api-types.ts"]
+    T -->|"openapi-fetch"| F["Frontend client<br/>apps/web"]
+
+    O -.->|"CI: regenerate, diff, fail on drift"| CHK1{{"matches committed copy?"}}
+    T -.->|"CI: regenerate, diff, fail on drift"| CHK2{{"matches committed copy?"}}
+    CHK1 -.->|no| X1["❌ build fails here"]
+    CHK2 -.->|no| X2["❌ frontend typecheck fails here"]
+
+    style X1 fill:#4a1c1c,stroke:#e5484d
+    style X2 fill:#4a1c1c,stroke:#e5484d
 ```
 
 CI regenerates the document and **fails if it differs from the committed copy**,
 then regenerates the frontend's types and fails if _those_ differ. Remove a
 field the UI reads and the **frontend's typecheck** breaks — in the pull request
 that removed it, not in production.
+
+### Request lifecycle — a cache hit vs. a cache miss
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Fastify API
+    participant R as Redis (optional)
+    participant P as PostgreSQL
+
+    C->>A: GET /v1/seasons/2022/points-table
+    A->>A: validate query (Zod) · check rate limit
+    A->>R: GET v7:points-table:2022
+    alt cache hit
+        R-->>A: cached JSON
+        A-->>C: 200 + ETag (or 304 if If-None-Match matches)
+    else cache miss (or Redis absent)
+        R-->>A: (miss)
+        A->>P: SELECT from marts.points_table
+        P-->>A: rows
+        A->>R: SET v7:points-table:2022 (TTL)
+        A-->>C: 200 + ETag
+    end
+    Note over A,R: A mart refresh bumps the version stamp (v7→v8),<br/>invalidating every cached key atomically — no scan, no window.
+```
 
 ### Conventions
 
@@ -421,6 +475,13 @@ of any season belongs to a number eleven who faced two balls.
 
 Eight screens, server-rendered, with the charts streaming in behind `<Suspense>`
 so the scorecard never waits on them.
+
+<p align="center">
+  <img src="docs/images/web-home.png" width="49%" alt="Points table and season leaders, live" />
+  <img src="docs/images/web-matches.png" width="49%" alt="Filterable, cursor-paginated fixture list, live" />
+  <br/>
+  <sub>Live: <a href="https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io">/</a> and <a href="https://ipl-web.icytree-bb74c5d4.centralindia.azurecontainerapps.io/matches">/matches</a></sub>
+</p>
 
 | Route                        | Content                                                              |
 | ---------------------------- | -------------------------------------------------------------------- |
@@ -554,6 +615,16 @@ that the platform's headline claim still holds** — `data_quality_check_status`
 and `core_rows_current` are read from the same tables `/health/ready` and the
 ingest's own 23 checks use, not a synthetic demo metric.
 
+<p align="center">
+  <img src="docs/images/grafana-row-counts.png" width="49%" alt="Live row counts by entity, matching the README's own headline banner exactly" />
+  <img src="docs/images/grafana-data-quality.png" width="49%" alt="Data-quality checks currently failing — live, reading the same table the ingest's 23 checks write to" />
+  <br/>
+  <img src="docs/images/grafana-request-rate.png" width="49%" alt="Request rate by route" />
+  <img src="docs/images/grafana-latency.png" width="49%" alt="Request latency p50/p95/p99" />
+  <br/>
+  <sub>Four panels from the live dashboard — captured with <a href="apps/web/scripts/capture-screenshots.mjs"><code>apps/web/scripts/capture-screenshots.mjs</code></a>, not staged.</sub>
+</p>
+
 **Metrics exposed** (Prometheus format, `/metrics`, always on regardless of the
 observability profile):
 
@@ -598,36 +669,58 @@ make doing so a config change.
 
 ## CI/CD
 
-Every gate below actually fails the build.
+Every gate below actually fails the build. Three separate workflows, not one
+monolith — `ci.yml` on every push, `infra.yml` only when `infra/**` changes
+(no point spinning up a kind cluster for a route-handler edit), `cd.yml` on
+every push to `main`.
 
-```
-lint ─────────── eslint (layering enforced by boundaries) · prettier · tsc
-unit ─────────── vitest, 113 tests
-contract ─────── regenerate openapi.json → fail on drift → spectral
-                 → regenerate client types → fail on drift
-integration ──── Testcontainers Postgres · migrations · ingest · 23 tests
-security ─────── gitleaks · pnpm audit --audit-level=high
-images ───────── buildx → trivy (fail on HIGH/CRITICAL) → SBOM → cosign sign
-compose-smoke ── the clean-clone claim, executed: make up, then assert the
-                 served points table still reads "GT 20 0.316"
-helm ─────────── kind cluster · helm install --wait · rollout · curl
-terraform ────── fmt · validate · trivy config scan
-codeql ───────── security-extended, weekly
+```mermaid
+flowchart TD
+    subgraph CIW["ci.yml — every push"]
+        direction LR
+        LINT["lint<br/>eslint · prettier · tsc"] --> UNIT["unit<br/>113 tests"]
+        UNIT --> CONTRACT["contract<br/>openapi drift · spectral · client-type drift"]
+        CONTRACT --> INTEG["integration<br/>Testcontainers · migrations · ingest · 23 tests"]
+        INTEG --> SEC["security<br/>gitleaks · pnpm audit"]
+        SEC --> IMG["images<br/>buildx → trivy → SBOM → cosign sign"]
+        IMG --> SMOKE["compose-smoke<br/>make up, then assert '0.316'"]
+    end
+
+    subgraph IW["infra.yml — infra/** only"]
+        direction LR
+        HELM["helm<br/>kind cluster · install --wait · curl"]
+        TF["terraform<br/>fmt · validate · trivy config scan"]
+    end
+
+    subgraph CDW["cd.yml — push to main"]
+        direction LR
+        BUILD["build & push<br/>api, ingest images"] --> MIG["migrate<br/>separate blocking job,<br/>re-verifies 23 checks"]
+        MIG --> DEPAPI["deploy api"] --> STEST["smoke test<br/>incl. points table"]
+        STEST --> DEPWEB["build & deploy web<br/>against the live API URL"]
+    end
+
+    SMOKE -.->|independent trigger| CDW
 ```
 
 Actions are **pinned by SHA**, not by tag. Job permissions are least-privilege.
-Superseded runs are cancelled.
+Superseded runs are cancelled. CodeQL runs `security-extended` on a weekly
+schedule, separately from all three above.
 
-**CD uses Workload Identity Federation, not a service-account key.** A key is a
-long-lived credential that ends up in a secret store, gets copied to a laptop
-"just this once", and is still valid two years after its author left. WIF
-exchanges the workflow's OIDC token for a short-lived one scoped to this
-repository. There is no key to leak or rotate.
+**CD authenticates with a service principal, scoped to one resource group —
+not the subscription.** `AZURE_CREDENTIALS` is a client-secret credential
+created once with
+`az ad sp create-for-rbac --role contributor --scopes /subscriptions/<id>/resourceGroups/ipl-platform`
+(see the comment in `cd.yml`). A leaked credential can touch this project and
+nothing else.
 
-The deploy is gated: migrations run as a **separate blocking job** (which
-re-verifies the 23 checks), the new revision goes out at **0% traffic**, gets
-smoke-tested directly — including that the points table still matches — canaries
-at 10%, and only then promotes. Failure rolls traffic back.
+The deploy is gated, not blind: migrations run as a **separate job that
+re-verifies the 23 checks** before anything else moves, the API is smoke-tested
+directly against its live URL — including that the points table still reads
+`0.316` — and only then is the web image built (against that real, live API
+hostname) and deployed. Azure Container Apps has no native traffic-split
+primitive the way Cloud Run does, so `containerapp update` replaces the active
+revision directly rather than staging a canary; Container Apps keeps the prior
+revision, and the workflow prints the exact rollback command on failure.
 
 Migrations are **expand-then-contract**: add a column, backfill, switch reads,
 drop in a _later_ release. A destructive change in the same deploy that starts
@@ -640,12 +733,13 @@ using it cannot be rolled back.
 Being precise about this, because it is the easiest place in a submission to
 imply more than is true.
 
-| Component           | Status                                                                                                      |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `docker compose up` | **Works**, verified in CI on every push against a clean clone                                               |
-| Helm chart          | **Validated by applying it** — CI spins a kind cluster, installs, waits for rollout, curls the API          |
-| Cloud Run deploy    | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`)                                                |
-| Terraform           | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project** |
+| Component           | Status                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `docker compose up` | **Works**, verified in CI on every push against a clean clone                                                 |
+| Azure deploy        | **Live now** — the URLs above, deployed by `scripts/deploy-azure.sh` and kept live by `cd.yml` on every push  |
+| Helm chart          | **Validated by applying it** — CI spins a kind cluster, installs, waits for rollout, curls the API            |
+| Cloud Run deploy    | **Scripted and reproducible** (`scripts/deploy-cloudrun.sh`) — the alternative path, not the one that is live |
+| Terraform           | **Written and machine-checked** (`fmt`, `validate`, config scan in CI). **Never applied to a live project**   |
 
 **Live deployment (Azure Container Apps):**
 
@@ -658,6 +752,47 @@ imply more than is true.
 | Grafana | https://ipl-grafana.icytree-bb74c5d4.centralindia.azurecontainerapps.io — credentials shared separately, not committed here (gitleaks would fail the build on it anyway) |
 
 <!-- LIVE_URLS -->
+
+```mermaid
+flowchart TB
+    subgraph acr["Azure Container Registry"]
+        IMGS["api · web · ingest<br/>prometheus · grafana"]
+    end
+
+    subgraph env["Container Apps environment · ipl-env"]
+        API["ipl-api<br/>external ingress"]
+        WEB["ipl-web<br/>external ingress"]
+        ING["ipl-ingest<br/>Job — run-once, exits"]
+        PROM["ipl-prometheus<br/>internal ingress only"]
+        GRAF["ipl-grafana<br/>external ingress"]
+    end
+
+    PG[("PostgreSQL Flexible Server<br/>SSL required")]
+
+    IMGS -.->|pulled at deploy| API & WEB & ING & PROM & GRAF
+    ING -->|migrate → load → refresh → verify| PG
+    API --> PG
+    WEB -->|"build-time NEXT_PUBLIC_API_URL"| API
+    PROM -->|"scrapes /metrics<br/>every 5–15s"| API
+    GRAF -->|"queries<br/>(https:// — Container Apps<br/>redirects plain http even internally)"| PROM
+
+    User(("Reviewer's browser")) --> WEB
+    User --> API
+    User --> GRAF
+
+    style ING stroke-dasharray: 4 4
+    style PROM fill:#1a2332,stroke:#4a6a9e
+```
+
+Two things about this shape are deliberate rather than incidental: the ingest
+job **contains no host volume** — Container Apps Jobs have nowhere to mount
+one — so the dataset ships inside the image itself, and the tag that ran a
+given load _is_ the exact bytes that were loaded. And Grafana talks to
+Prometheus over `https://`, not the more obvious `http://`, because Container
+Apps' ingress enforces TLS even for traffic that never leaves the environment
+— a plain HTTP request gets a 301 that Grafana's own proxy does not follow,
+which surfaced as an opaque "400: error querying Prometheus" with no detail
+in Grafana's own logs until traced by hand.
 
 ### Deploying
 

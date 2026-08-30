@@ -25,7 +25,11 @@ web:
     limits: { memory: 256Mi }
 
 ingest:
-  enabled: false # CI seeds the database directly
+  # The chart's ingest hook needs the 33MB dataset, which has no volume to
+  # come from on a kind node. The CI workflow runs `ingest migrate` as a
+  # one-off pod against the same database instead (see infra.yml) — the
+  # schema must exist either way, or the api's readiness probe never passes.
+  enabled: false
 
 ingress:
   enabled: false

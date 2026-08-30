@@ -55,8 +55,10 @@ jobs:
         run: |
           docker build -f apps/api/Dockerfile -t ghcr.io/ipl-platform/api:ci .
           docker build -f apps/web/Dockerfile -t ghcr.io/ipl-platform/web:ci .
+          docker build -f apps/ingest/Dockerfile -t ghcr.io/ipl-platform/ingest:ci .
           kind load docker-image ghcr.io/ipl-platform/api:ci --name ipl-ci
           kind load docker-image ghcr.io/ipl-platform/web:ci --name ipl-ci
+          kind load docker-image ghcr.io/ipl-platform/ingest:ci --name ipl-ci
 
       - name: Install Postgres for the chart to talk to
         run: |
@@ -90,6 +92,19 @@ jobs:
             ports: [{ port: 5432, targetPort: 5432 }]
           EOF
           kubectl rollout status deploy/postgres --timeout=180s
+
+      # values-local.yaml disables the chart's ingest hook — there is no
+      # dataset volume in kind — but the schema still has to exist, because
+      # /health/ready reports "down" when no migration has been applied and
+      # the api's readiness probe then never passes. `migrate` (not `all`)
+      # is deliberate: it creates the schema and the matviews without
+      # needing the 33MB dataset the load and verify steps want.
+      - name: Migrate the database
+        run: |
+          kubectl run migrate --rm -i --restart=Never \
+            --image=ghcr.io/ipl-platform/ingest:ci --image-pull-policy=Never \
+            --env=DATABASE_URL=postgres://ipl:ipl@postgres:5432/ipl \
+            -- migrate
 
       - name: Install the chart
         run: |

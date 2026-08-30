@@ -2,6 +2,7 @@
   "name": "ipl-platform",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@10.18.2",
   "engines": {
     "node": ">=22"
