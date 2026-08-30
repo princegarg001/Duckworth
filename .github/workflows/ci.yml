@@ -197,15 +197,24 @@ jobs:
           provenance: true
           sbom: true
 
-      - name: Scan for vulnerabilities
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+      # aquasecurity/trivy-action wraps the CLI in a way that has shown a real
+      # bug here: it reports exit code 1 (build failure) while the SARIF it
+      # uploads in the very same invocation contains zero HIGH/CRITICAL
+      # results — verified by pulling the exact image this step scanned and
+      # running trivy directly against it, twice, on two trivy versions, both
+      # clean. Running the CLI ourselves gives the same result the manual
+      # verification did: the SARIF (all severities, for the Security tab)
+      # and the pass/fail gate (HIGH/CRITICAL only) come from two explicit,
+      # separately-reasoned invocations instead of one wrapper's internals.
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
         with:
-          image-ref: ghcr.io/${{ steps.repo.outputs.name }}/${{ matrix.service }}:${{ github.sha }}
-          format: sarif
-          output: trivy-${{ matrix.service }}.sarif
-          severity: 'HIGH,CRITICAL'
-          exit-code: '1'
-          ignore-unfixed: true
+          version: 0.70.0
+
+      - name: Record vulnerabilities for the Security tab
+        run: |
+          trivy image --format sarif --output trivy-${{ matrix.service }}.sarif \
+            ghcr.io/${{ steps.repo.outputs.name }}/${{ matrix.service }}:${{ github.sha }}
 
       - name: Upload scan results
         if: always()
@@ -213,6 +222,11 @@ jobs:
         with:
           sarif_file: trivy-${{ matrix.service }}.sarif
           category: trivy-${{ matrix.service }}
+
+      - name: Fail on fixable HIGH/CRITICAL vulnerabilities
+        run: |
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            ghcr.io/${{ steps.repo.outputs.name }}/${{ matrix.service }}:${{ github.sha }}
 
       # Keyless signing: the signature is bound to this workflow's OIDC
       # identity, so there is no long-lived key to leak or rotate.
