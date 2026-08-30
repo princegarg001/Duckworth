@@ -234,7 +234,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(data_quality_check_status{status=\"fail\"})"
+          "expr": "sum(data_quality_check_status{status=\"fail\"}) OR vector(0)"
         }
       ]
     },
