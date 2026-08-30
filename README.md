@@ -1,4 +1,4 @@
-# IPL Data Platform
+# Duckworth
 
 [![CI](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/ci.yml)
 [![CD](https://img.shields.io/github/actions/workflow/status/princegarg001/Duckworth/cd.yml?branch=main&label=CD&logo=githubactions&logoColor=white)](https://github.com/princegarg001/Duckworth/actions/workflows/cd.yml)
