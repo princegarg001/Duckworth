@@ -142,13 +142,17 @@ jobs:
             terraform -chdir="$dir" validate
           done
 
-      - name: Scan for insecure configuration
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+      # trivy-action's bundled setup-trivy reference has gone stale before
+      # (see ci.yml's history) and its exit-code has shown a real mismatch
+      # against its own SARIF output on this repository — invoking the CLI
+      # directly avoids both, consistent with how ci.yml's image scan works.
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
         with:
-          scan-type: config
-          scan-ref: infra/terraform
-          severity: 'HIGH,CRITICAL'
-          exit-code: '1'
+          version: v0.70.0
+
+      - name: Scan for insecure configuration
+        run: trivy config --severity HIGH,CRITICAL --exit-code 1 infra/terraform
 
       # `terraform plan` against the real project needs Workload Identity
       # Federation credentials, which this repository does not have. When they

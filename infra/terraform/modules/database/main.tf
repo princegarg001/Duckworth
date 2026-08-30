@@ -100,7 +100,9 @@ resource "google_sql_user" "app" {
 resource "google_secret_manager_secret" "database_url" {
   secret_id = "${var.name}-database-url"
   labels    = var.labels
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 
 resource "google_secret_manager_secret_version" "database_url" {

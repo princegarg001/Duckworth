@@ -222,6 +222,7 @@ export async function buildApp(env: ApiEnv, overrides: { db?: DbHandle } = {}) {
       // Marts are refreshed by the ingest job, which for this dataset runs
       // once. A day is the point at which silence means something is wrong.
       martStalenessThresholdSeconds: 86_400,
+      metrics,
     });
   });
 
@@ -243,6 +244,38 @@ export async function buildApp(env: ApiEnv, overrides: { db?: DbHandle } = {}) {
             from core.mart_refresh
           `;
           for (const r of rows) metrics.martStalenessSeconds.set({ mart: r.mart_name }, r.age);
+        } catch {
+          // Metrics must not fail because the database is briefly unavailable.
+        }
+
+        try {
+          // The same eight entities the README's own headline banner counts —
+          // one UNION ALL, not eight round trips.
+          const rows = await db.sql<{ entity: string; n: string }[]>`
+            select 'match' as entity, count(*)::text as n from core.match
+            union all select 'innings', count(*)::text from core.innings
+            union all select 'delivery', count(*)::text from core.delivery
+            union all select 'dismissal', count(*)::text from core.dismissal
+            union all select 'player', count(*)::text from core.player
+            union all select 'team', count(*)::text from core.team
+            union all select 'venue', count(*)::text from core.venue
+            union all select 'official', count(*)::text from core.official
+          `;
+          for (const r of rows) metrics.coreRowsCurrent.set({ entity: r.entity }, Number(r.n));
+        } catch {
+          // Metrics must not fail because the database is briefly unavailable.
+        }
+
+        try {
+          const rows = await db.sql<{ check_name: string; status: string }[]>`
+            select distinct on (check_name) check_name, status
+            from quality.check_result
+            order by check_name, ran_at desc
+          `;
+          metrics.dataQualityCheckStatus.reset();
+          for (const r of rows) {
+            metrics.dataQualityCheckStatus.set({ check: r.check_name, status: r.status }, 1);
+          }
         } catch {
           // Metrics must not fail because the database is briefly unavailable.
         }

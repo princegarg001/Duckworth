@@ -23,11 +23,10 @@ export interface Metrics {
   readonly registry: Registry;
   readonly httpRequestDuration: Histogram<'method' | 'route' | 'status'>;
   readonly httpRequestsTotal: Counter<'method' | 'route' | 'status'>;
-  readonly dbPoolConnections: Gauge<'state'>;
   readonly dbQueryDuration: Histogram<'operation'>;
   readonly cacheOperations: Counter<'result'>;
   readonly martStalenessSeconds: Gauge<'mart'>;
-  readonly ingestRowsTotal: Counter<'entity'>;
+  readonly coreRowsCurrent: Gauge<'entity'>;
   readonly dataQualityCheckStatus: Gauge<'check' | 'status'>;
 }
 
@@ -55,16 +54,9 @@ export function createMetrics(opts: { serviceName: string; defaultMetrics?: bool
     registers: [registry],
   });
 
-  const dbPoolConnections = new Gauge({
-    name: 'db_pool_connections',
-    help: 'Database pool connections by state',
-    labelNames: ['state'] as const,
-    registers: [registry],
-  });
-
   const dbQueryDuration = new Histogram({
     name: 'db_query_duration_seconds',
-    help: 'Database query latency by logical operation',
+    help: "Backend dependency latency by logical operation (recorded from /health/ready's own checks: ping, cache_ping, migrations_count, mart_freshness, data_quality)",
     labelNames: ['operation'] as const,
     buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5],
     registers: [registry],
@@ -84,9 +76,12 @@ export function createMetrics(opts: { serviceName: string; defaultMetrics?: bool
     registers: [registry],
   });
 
-  const ingestRowsTotal = new Counter({
-    name: 'ingest_rows_total',
-    help: 'Rows loaded by the ingest pipeline',
+  // A gauge, not a counter: this is "how many rows exist right now", sampled
+  // at scrape time from core.*, not an incrementing count of writes. Naming
+  // it *_total would misrepresent it as the latter.
+  const coreRowsCurrent = new Gauge({
+    name: 'core_rows_current',
+    help: 'Current row count per entity in the core schema',
     labelNames: ['entity'] as const,
     registers: [registry],
   });
@@ -102,11 +97,10 @@ export function createMetrics(opts: { serviceName: string; defaultMetrics?: bool
     registry,
     httpRequestDuration,
     httpRequestsTotal,
-    dbPoolConnections,
     dbQueryDuration,
     cacheOperations,
     martStalenessSeconds,
-    ingestRowsTotal,
+    coreRowsCurrent,
     dataQualityCheckStatus,
   };
 }

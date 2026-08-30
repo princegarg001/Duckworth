@@ -1,0 +1,304 @@
+{
+  "title": "IPL Data Platform",
+  "uid": "ipl-platform",
+  "tags": ["ipl-platform"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "row",
+      "title": "Golden signals — RED (rate, errors, duration)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "collapsed": false,
+      "panels": []
+    },
+
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate by route",
+      "description": "sum(rate(http_requests_total[1m])) by (route) — traffic shape, not just a single number.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[1m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Error rate (5xx)",
+      "description": "5xx responses as a percentage of all requests. The one number that should page someone.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": { "drawStyle": "line", "fillOpacity": 15 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "100 * sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)",
+          "legendFormat": "5xx %"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Request latency (p50 / p95 / p99)",
+      "description": "histogram_quantile over http_request_duration_seconds. Buckets are tuned around this API's own p99 budget, not the library default.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 5 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+
+    {
+      "type": "row",
+      "title": "Resource signals — USE (utilisation, saturation, errors)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 101,
+      "collapsed": false,
+      "panels": []
+    },
+
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Event loop lag (p50 / p99)",
+      "description": "nodejs_eventloop_lag_seconds — the USE 'saturation' signal for a single-threaded Node service. Rising lag under flat request rate means something is blocking the loop, not the database.",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "nodejs_eventloop_lag_p50_seconds",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "nodejs_eventloop_lag_p99_seconds",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Backend dependency latency (p95 by operation)",
+      "description": "db_query_duration_seconds — real timings from /health/ready's own checks (ping, cache_ping, migrations_count, mart_freshness, data_quality), not a synthetic sample.",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "gauge",
+      "title": "Cache hit ratio",
+      "description": "share of cache_operations_total that resolved as a hit over the last 15 minutes.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "green", "value": 0.8 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(cache_operations_total{result=\"hit\"}[15m])) / clamp_min(sum(rate(cache_operations_total[15m])), 1e-9)"
+        }
+      ]
+    },
+
+    {
+      "type": "row",
+      "title": "Data platform trust — the numbers that make the README's claim checkable",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "id": 102,
+      "collapsed": false,
+      "panels": []
+    },
+
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Materialised-view staleness",
+      "description": "mart_staleness_seconds — seconds since each mart was last refreshed. A rising line with no ingest running is a stuck refresh.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "mart_staleness_seconds",
+          "legendFormat": "{{mart}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Data-quality checks currently failing",
+      "description": "data_quality_check_status — the same 23 checks that gate the ingest job, visible live rather than only in a CI log.",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(data_quality_check_status{status=\"fail\"})"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Row counts (core schema)",
+      "description": "core_rows_current by entity, sampled live at scrape time — the same eight entities the README's own headline banner counts.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "core_rows_current",
+          "legendFormat": "{{entity}}"
+        }
+      ]
+    },
+
+    {
+      "type": "row",
+      "title": "Process",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "id": 103,
+      "collapsed": false,
+      "panels": []
+    },
+
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "CPU time",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(process_cpu_seconds_total[1m])",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Resident memory",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    }
+  ]
+}

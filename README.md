@@ -21,6 +21,49 @@ The headline claim, and the one the whole design is arranged around:
 
 ---
 
+## Submission checklist
+
+Every item mapped to the exact thing that satisfies it — not a claim, a path.
+
+| Requirement                     | Where                                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Architecture overview           | [Architecture](#architecture) below, plus [docs/architecture.md](docs/architecture.md) for the threat model                                                              |
+| Local setup instructions        | [Quickstart](#quickstart) — three commands, verified in CI on every push                                                                                                 |
+| Deployed setup instructions     | [Deployment](#deployment) — two independently-working paths (Azure, GCP), plus the Terraform for a real environment                                                      |
+| Database schema / migrations    | [Data model](#data-model) below; source at [`packages/db/src/schema`](packages/db/src/schema), [`packages/db/migrations`](packages/db/migrations)                        |
+| Dockerfiles & docker-compose    | [`apps/*/Dockerfile`](apps/api/Dockerfile) (multi-stage, distroless) · [`docker-compose.yml`](docker-compose.yml)                                                        |
+| GitHub Actions workflows        | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) · [`cd.yml`](.github/workflows/cd.yml) — see [CI/CD](#cicd)                                                       |
+| Kubernetes configuration        | [`infra/helm/ipl-platform/`](infra/helm/ipl-platform) — a real chart, **applied** to a `kind` cluster on every CI run, not just linted                                   |
+| OpenAPI documentation           | Live: [`/docs`](https://ipl-api.icytree-bb74c5d4.centralindia.azurecontainerapps.io/docs) · Source: [`packages/contracts/openapi.json`](packages/contracts/openapi.json) |
+| Deployed application URLs       | [Live deployment](#deployment) — Web, API, docs and health, all reachable now                                                                                            |
+| _Stretch:_ Terraform (IaC)      | [`infra/terraform/`](infra/terraform) — validated in CI, honestly marked as never applied to a live project                                                              |
+| _Stretch:_ Kubernetes / Helm    | Done and proven — see the Kubernetes row above                                                                                                                           |
+| _Stretch:_ Monitoring dashboard | [Observability](#observability) — Prometheus + Grafana, wired and running, not just instrumented                                                                         |
+
+<details>
+<summary>Table of contents</summary>
+
+- [Quickstart](#quickstart)
+- [Architecture](#architecture)
+- [The dataset is not what the brief implies](#the-dataset-is-not-what-the-brief-implies)
+- [Data model](#data-model)
+- [Correctness](#correctness)
+- [API](#api)
+- [Frontend](#frontend)
+- [Operations](#operations)
+- [Observability](#observability)
+- [CI/CD](#cicd)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Performance](#performance)
+- [Trade-offs, and what I would do next](#trade-offs-and-what-i-would-do-next)
+- [Repository layout](#repository-layout)
+- [Documentation](#documentation)
+
+</details>
+
+---
+
 ## Quickstart
 
 Three commands. The third takes a few minutes on a cold Docker cache.
@@ -55,6 +98,20 @@ make db          # postgres + redis only
 make ingest      # migrate, load, refresh, verify
 pnpm dev         # api on :3000, web on :3001
 ```
+
+</details>
+
+<details>
+<summary>Watching it work — Prometheus + Grafana</summary>
+
+```bash
+make observability   # adds Prometheus, Grafana and the OTel collector
+```
+
+Opens a pre-loaded dashboard at http://localhost:3002 (no login needed) —
+request rate and latency, event-loop lag, cache hit ratio, and the same
+data-quality and row-count numbers the ingest itself checks, all live. See
+[Observability](#observability) below for what each panel means and why.
 
 </details>
 
@@ -112,7 +169,7 @@ matches what the provider says. Everything the API returns comes from `core`.
 **Stack:** Node 22 · TypeScript (strict, `noUncheckedIndexedAccess`) · Fastify 5
 · Drizzle · PostgreSQL 17 · Redis · Next.js 15 · Tailwind · Recharts ·
 pnpm workspaces + Turborepo · Vitest + Testcontainers · Docker (distroless) ·
-GitHub Actions · Helm · Terraform.
+GitHub Actions · Helm · Terraform · OpenTelemetry · Prometheus + Grafana.
 
 ---
 
@@ -440,6 +497,99 @@ in the system.
 
 ---
 
+## Observability
+
+Three pillars, and every one of them is a running system, not a slide.
+
+```mermaid
+flowchart LR
+    subgraph api["ipl-api process"]
+        REG["Prometheus registry<br/>packages/observability/src/metrics.ts"]
+        OTEL["OTel SDK<br/>(opt-in — OTEL_ENABLED)"]
+        LOG["pino → JSON stdout<br/>redacted, trace_id-tagged"]
+    end
+
+    REG -->|"GET /metrics<br/>every 5s"| PROM[Prometheus]
+    PROM --> GRAF["Grafana<br/>pre-provisioned dashboard"]
+    OTEL -->|OTLP/HTTP| COLL[OTel Collector]
+
+    style OTEL stroke-dasharray: 4 4
+    style COLL stroke-dasharray: 4 4
+```
+
+```bash
+make observability   # docker compose --profile observability up -d
+```
+
+Opens onto **a dashboard that is already populated** — datasource and panels
+are provisioned on boot from files in the repository
+([`infra/grafana/provisioning`](infra/grafana/provisioning)), so there is no
+setup wizard between cloning this repository and seeing real numbers move.
+
+| Where                  | URL                                            |
+| ---------------------- | ---------------------------------------------- |
+| Grafana                | http://localhost:3002 (anonymous admin access) |
+| Prometheus             | http://localhost:9090                          |
+| Raw metrics (any time) | http://localhost:3000/metrics                  |
+
+**The dashboard, row by row** — every panel below queries a metric the API
+already emits; nothing in Grafana is a second source of truth:
+
+| Row                                       | Panels                                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **RED** (rate, errors, duration)          | Request rate by route · 5xx error rate · latency p50/p95/p99                                    |
+| **USE** (utilisation, saturation, errors) | Event-loop lag p50/p99 · backend dependency latency by operation · cache hit ratio              |
+| **Data platform trust**                   | Materialised-view staleness · data-quality checks currently failing · live row counts by entity |
+| **Process**                               | CPU time · resident memory                                                                      |
+
+Two of those rows are the generic ones any service needs. The third is the
+one that matters for _this_ service: **the dashboard can show a reviewer, live,
+that the platform's headline claim still holds** — `data_quality_check_status`
+and `core_rows_current` are read from the same tables `/health/ready` and the
+ingest's own 23 checks use, not a synthetic demo metric.
+
+**Metrics exposed** (Prometheus format, `/metrics`, always on regardless of the
+observability profile):
+
+| Metric                          | Type      | Labels                | Source                                                               |
+| ------------------------------- | --------- | --------------------- | -------------------------------------------------------------------- |
+| `http_requests_total`           | Counter   | `method,route,status` | Every response, via an `onResponse` hook                             |
+| `http_request_duration_seconds` | Histogram | `method,route,status` | Same hook, `reply.elapsedTime`                                       |
+| `db_query_duration_seconds`     | Histogram | `operation`           | The real timings behind `/health/ready`'s own five checks            |
+| `cache_operations_total`        | Counter   | `result`              | Redis hit/miss/error counters, sampled at scrape time                |
+| `mart_staleness_seconds`        | Gauge     | `mart`                | `core.mart_refresh`, sampled at scrape time                          |
+| `core_rows_current`             | Gauge     | `entity`              | Live `count(*)` across the eight entities in the README's own banner |
+| `data_quality_check_status`     | Gauge     | `check,status`        | Latest row per check in `quality.check_result`                       |
+
+That table is deliberately this specific. An earlier pass through this wiring
+had `db_pool_connections` defined but never populated — `postgres.js` does not
+expose pool internals publicly, and reaching into its private queues for a
+demo metric would have been exactly the kind of fragile guess this project
+argues against elsewhere. It was removed rather than shipped as a permanently
+empty panel; `db_query_duration_seconds` and `core_rows_current` were wired to
+real queries instead of staying aspirational.
+
+**Traces** are OpenTelemetry auto-instrumentation (HTTP, Fastify, `pg`,
+`ioredis`), OTLP-exported, off by default (`OTEL_ENABLED=false`) so a plain
+`make up` costs nothing extra. `docker-compose.yml` ships a real
+`otel-collector` service in the same profile so the wiring is exercisable, not
+theoretical — it logs received spans to its own stdout
+(`docker compose logs otel-collector`); swapping the exporter for Datadog or
+Honeycomb is a config change in [`infra/otel/collector.yaml`](infra/otel/collector.yaml),
+not an application change.
+
+**Logs** are structured JSON everywhere including local development, with
+config-based redaction (auth headers, cookies, tokens, `DATABASE_URL`) so a
+debug dump cannot leak a secret, and a `traceId` on every request-completion
+line for correlation with an active trace.
+
+**Honestly not done:** logs are not yet trace-linked (`trace_id`/`span_id`
+injected into each log line so a log and a trace can be pivoted between); no
+external vendor (Datadog, Honeycomb) is wired — only the OTLP path that would
+make doing so a config change.
+
+---
+
 ## CI/CD
 
 Every gate below actually fails the build.
@@ -660,6 +810,9 @@ infra/
   helm/        Chart proven by a kind job in CI
   terraform/   GCP modules — validated in CI, never applied
   k8s/kind/    CI cluster config
+  prometheus/  Scrape config for the api's own /metrics
+  grafana/     Provisioned datasource + the dashboard in this README
+  otel/        Local collector config for the tracing profile
 docs/
   architecture.md · data-model.md · runbook.md · adr/
 ```

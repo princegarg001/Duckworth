@@ -127,8 +127,10 @@ services:
       api:
         condition: service_healthy
 
-  # Opt-in: `docker compose --profile observability up`. Off by default so a
-  # first-time `make up` does not pull a 200MB image nobody asked for.
+  # Opt-in: `docker compose --profile observability up` (or `make observability`).
+  # Off by default so a first-time `make up` does not pull three extra images
+  # nobody asked for. `api` already exposes /metrics unconditionally — this
+  # profile adds the pieces that scrape, store and render it.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.116.1
     profiles: ['observability']
@@ -138,5 +140,49 @@ services:
     ports:
       - '4318:4318'
 
+  # Scrapes api:3000/metrics on a 5s interval. The dashboard Grafana loads
+  # below reads only series that endpoint already emits — nothing here is a
+  # second source of truth for what the platform is doing.
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    profiles: ['observability']
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=6h'
+    ports:
+      - '${PROMETHEUS_PORT:-9090}:9090'
+    depends_on:
+      - api
+
+  # Datasource and dashboard are both provisioned on boot (see
+  # infra/grafana/provisioning), so this opens straight onto a populated
+  # "IPL Data Platform" dashboard — no setup wizard, no manual import.
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    profiles: ['observability']
+    environment:
+      # Anonymous admin access: this is a local/dev convenience profile, not
+      # a deployed surface — nothing here is reachable from outside the
+      # reviewer's own machine.
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_DEFAULT_APP_MODE: development
+    volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      # A separate top-level path, not nested under the read-only mount above —
+      # Grafana cannot create a mountpoint for a second bind mount inside a
+      # directory that is already a read-only bind mount.
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - '${GRAFANA_PORT:-3002}:3000'
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  promdata:

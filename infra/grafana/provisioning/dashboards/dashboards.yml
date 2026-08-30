@@ -1,0 +1,12 @@
+# Tells Grafana to load every dashboard JSON in ../dashboards on boot, rather
+# than requiring one to be imported by hand.
+apiVersion: 1
+
+providers:
+  - name: ipl-platform
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,13 @@
+# Auto-provisioned so a reviewer never has to click through Grafana's setup
+# wizard — `docker compose --profile observability up` produces a dashboard
+# with data already wired, not an empty shell asking for a data source.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

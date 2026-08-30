@@ -36,6 +36,13 @@ up: data ## Start the whole stack (postgres, redis, ingest, api, web)
 	@echo "  docs    http://localhost:$${API_PORT:-3000}/docs"
 	@echo "  health  http://localhost:$${API_PORT:-3000}/health/ready"
 
+.PHONY: observability
+observability: ## Start Prometheus + Grafana + the OTel collector alongside the stack
+	docker compose --profile observability up -d
+	@echo ""
+	@echo "  grafana     http://localhost:$${GRAFANA_PORT:-3002}  (anonymous admin, dashboard pre-loaded)"
+	@echo "  prometheus  http://localhost:$${PROMETHEUS_PORT:-9090}"
+
 .PHONY: down
 down: ## Stop the stack, keeping the database volume
 	docker compose down

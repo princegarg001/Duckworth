@@ -1,0 +1,14 @@
+# Scrapes the API's own /metrics endpoint — the same Prometheus registry
+# documented in packages/observability/src/metrics.ts. Nothing here is a
+# second source of truth: every series Grafana renders is exactly what the
+# API already exposes; this just polls it on a schedule and stores history.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: ipl-api
+    static_configs:
+      - targets: ['api:3000']
+        labels:
+          service: ipl-api

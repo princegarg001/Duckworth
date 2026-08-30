@@ -1,4 +1,5 @@
 import type { DbHandle } from '@ipl/db';
+import type { Metrics } from '@ipl/observability';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -58,21 +59,25 @@ export interface HealthDeps {
   readonly commit: string;
   /** Marts older than this are reported as degraded. */
   readonly martStalenessThresholdSeconds: number;
+  /** Records each check's real latency into db_query_duration_seconds. */
+  readonly metrics: Pick<Metrics, 'dbQueryDuration'>;
 }
 
 async function timed<T>(
+  operation: string,
+  metrics: Pick<Metrics, 'dbQueryDuration'>,
   fn: () => Promise<T>,
 ): Promise<{ ms: number; value: T | null; error: string | null }> {
   const started = Date.now();
   try {
     const value = await fn();
-    return { ms: Date.now() - started, value, error: null };
+    const ms = Date.now() - started;
+    metrics.dbQueryDuration.observe({ operation }, ms / 1000);
+    return { ms, value, error: null };
   } catch (err) {
-    return {
-      ms: Date.now() - started,
-      value: null,
-      error: err instanceof Error ? err.message : String(err),
-    };
+    const ms = Date.now() - started;
+    metrics.dbQueryDuration.observe({ operation }, ms / 1000);
+    return { ms, value: null, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -112,22 +117,22 @@ export async function healthRoutes(fastify: FastifyInstance, deps: HealthDeps): 
     },
     async (_request, reply) => {
       const [dbCheck, cacheCheck, migrations, marts, quality] = await Promise.all([
-        timed(async () => {
+        timed('ping', deps.metrics, async () => {
           await deps.db.sql`select 1 as ok`;
           return true;
         }),
-        timed(async () => {
+        timed('cache_ping', deps.metrics, async () => {
           if (!deps.cache.enabled) return 'disabled';
           await deps.cache.client?.ping();
           return 'ok';
         }),
-        timed(async () => {
+        timed('migrations_count', deps.metrics, async () => {
           const rows = await deps.db.sql<{ n: string }[]>`
             select count(*)::text as n from drizzle.__drizzle_migrations
           `;
           return Number(rows[0]?.n ?? 0);
         }),
-        timed(async () => {
+        timed('mart_freshness', deps.metrics, async () => {
           const rows = await deps.db.sql<{ last: string | null; age: number | null }[]>`
             select max(refreshed_at)::text as last,
                    extract(epoch from (now() - min(refreshed_at)))::int as age
@@ -135,7 +140,7 @@ export async function healthRoutes(fastify: FastifyInstance, deps: HealthDeps): 
           `;
           return rows[0] ?? { last: null, age: null };
         }),
-        timed(async () => {
+        timed('data_quality', deps.metrics, async () => {
           // Only the most recent run of each check counts; older failures that
           // have since been fixed must not keep the service unready forever.
           const rows = await deps.db.sql<{ failing: string; last: string | null }[]>`
