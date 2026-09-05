@@ -73,7 +73,7 @@ RUN curl -sSLf -o ipl.zip "$DATASET_URL" \
 # the fix, so pull just the two shared objects from a fresh install here and
 # overwrite distroless's copies below — no shell or package manager ends up in
 # the runtime image, only the two .so files change.
-FROM debian:12-slim AS libssl-patch
+FROM debian:13-slim AS libssl-patch
 RUN apt-get update && apt-get install -y --no-install-recommends libssl3 \
     && dpkg-query -s libssl3 | grep -v '^Status:' > /libssl3.status \
     && rm -rf /var/lib/apt/lists/*
